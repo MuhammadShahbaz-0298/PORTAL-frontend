@@ -1,7 +1,43 @@
-/* Feature hook: one domain request lifecycle per page, no transport logic in JSX. */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiError } from '../api/client';
-const toCollection = (payload) => { if (Array.isArray(payload)) return payload; for (const key of ['data', 'items', 'records', 'assignments', 'submissions', 'attendance', 'attendanceRecords', 'roles', 'users', 'batches']) if (Array.isArray(payload?.[key])) return payload[key]; if (payload?.data && payload.data !== payload) return toCollection(payload.data); return []; };
-const responseError = (payload) => payload?.error || payload?.message || '';
+import { responseError, toCollection } from '../lib/apiData';
 
-export default function useApiResource(fetcher, options = {}) { const { enabled = true, params, key = '' } = options; const fetcherRef = useRef(fetcher); const paramsRef = useRef(params); fetcherRef.current = fetcher; paramsRef.current = params; const [data, setData] = useState([]); const [loading, setLoading] = useState(enabled); const [error, setError] = useState(''); const load = useCallback(async () => { if (!enabled) return; setLoading(true); setError(''); try { const response = await fetcherRef.current(paramsRef.current); const serverError = responseError(response.data); if (serverError) throw new Error(serverError); const result = toCollection(response.data); setData(result); return result; } catch (requestError) { setError(apiError(requestError)); throw requestError; } finally { setLoading(false); } }, [enabled, key]); useEffect(() => { load().catch(() => undefined); }, [load]); return { data, setData, loading, error, reload: load }; }
+export default function useApiResource(fetcher, options = {}) {
+  const { enabled = true, params, key = '' } = options;
+  const fetcherRef = useRef(fetcher);
+  const paramsRef = useRef(params);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(enabled);
+  const [error, setError] = useState('');
+
+  fetcherRef.current = fetcher;
+  paramsRef.current = params;
+
+  const load = useCallback(async () => {
+    if (!enabled) return [];
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetcherRef.current(paramsRef.current);
+      const serverError = responseError(response.data);
+      if (serverError) throw new Error(serverError);
+
+      const result = toCollection(response.data);
+      setData(result);
+      return result;
+    } catch (requestError) {
+      setError(apiError(requestError));
+      throw requestError;
+    } finally {
+      setLoading(false);
+    }
+  }, [enabled, key]);
+
+  useEffect(() => {
+    load().catch(() => undefined);
+  }, [load]);
+
+  return { data, setData, loading, error, reload: load };
+}
