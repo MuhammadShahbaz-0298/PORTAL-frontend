@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiError } from '../api/client';
-import { responseError, toCollection } from '../lib/apiData';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiError } from "../api/client";
+import { responseError, toCollection } from "../lib/apiData";
 
 export default function useApiResource(fetcher, options = {}) {
-  const { enabled = true, params, key = '' } = options;
+  const { enabled = true, params, key = "" } = options;
   const fetcherRef = useRef(fetcher);
   const paramsRef = useRef(params);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(enabled);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   fetcherRef.current = fetcher;
   paramsRef.current = params;
@@ -17,7 +17,7 @@ export default function useApiResource(fetcher, options = {}) {
     if (!enabled) return [];
 
     setLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await fetcherRef.current(paramsRef.current);
