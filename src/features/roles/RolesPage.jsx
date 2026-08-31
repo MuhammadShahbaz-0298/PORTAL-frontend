@@ -23,17 +23,18 @@ import {
 import useApiResource from "../../hooks/useApiResource";
 import { PageHeader } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
+import ToastNotification from "../../components/ui/ToastNotification";
 const permissionLabels = {
   "dashboard.view": "Dashboard",
   "students.view": "View students",
   "students.create": "Create students",
   "students.update": "Edit students",
   "students.attendance": "Student attendance",
-  "teachers.view": "View teachers",
-  "teachers.create": "Create teachers",
-  "teachers.update": "Edit teachers",
   "batches.view": "View batches",
   "batches.create": "Create batches",
+  "batches.update": "Edit batches",
+  "batches.delete": "Delete batches",
+  "batches.enroll": "Enroll students",
   "assignments.view": "View assignments",
   "assignments.create": "Create assignments",
   "assignments.update": "Edit assignments",
@@ -54,8 +55,13 @@ const permissionGroups = {
     "students.update",
     "students.attendance",
   ],
-  Teachers: ["teachers.view", "teachers.create", "teachers.update"],
-  Batches: ["batches.view", "batches.create"],
+  Batches: [
+    "batches.view",
+    "batches.create",
+    "batches.update",
+    "batches.delete",
+    "batches.enroll",
+  ],
   Assignments: [
     "assignments.view",
     "assignments.create",
@@ -148,11 +154,7 @@ export default function RolesPage() {
           </Button>
         }
       />
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       <Card className="table-card">
         <CardBody>
           <DataTable

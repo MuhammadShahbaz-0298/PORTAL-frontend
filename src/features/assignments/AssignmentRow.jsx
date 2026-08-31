@@ -1,12 +1,14 @@
-import { Archive, Eye } from "lucide-react";
+import { Archive, Edit3, Eye } from "lucide-react";
 import { Button } from "reactstrap";
 import { getAssignmentStatus } from "./assignmentUtils";
 
 export default function AssignmentRow({
   assignment,
-  canManage,
+  canEdit,
+  canDelete,
   closingId,
   onClose,
+  onEdit,
   onView,
 }) {
   const status = getAssignmentStatus(assignment);
@@ -50,11 +52,21 @@ export default function AssignmentRow({
           <Eye size={14} /> View
         </Button>
       </td>
-      {canManage && (
+      {(canEdit || canDelete) && (
         <td>
-          {assignment.active === false ? (
-            <span className="muted">Closed</span>
-          ) : (
+          {canEdit && assignment.active !== false && (
+            <Button
+              color="light"
+              className="table-action"
+              onClick={event => {
+                event.stopPropagation();
+                onEdit(assignment);
+              }}
+            >
+              <Edit3 size={14} /> Edit
+            </Button>
+          )}
+          {canDelete && assignment.active !== false ? (
             <Button
               color="light"
               className="table-action"
@@ -64,10 +76,11 @@ export default function AssignmentRow({
                 onClose(assignment._id);
               }}
             >
-              <Archive size={14} />{" "}
-              {closingId === assignment._id ? "Closing…" : "Close"}
+              <Archive size={14} /> {closingId === assignment._id ? "Closing…" : "Close"}
             </Button>
-          )}
+          ) : !canEdit && assignment.active === false ? (
+            <span className="muted">Closed</span>
+          ) : null}
         </td>
       )}
     </tr>

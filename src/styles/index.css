@@ -12,6 +12,50 @@
   --soft-coral: #f8e9e3;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
 }
+.portal-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 13px 14px;
+  border: 1px solid #a7d7c3;
+  border-radius: 8px;
+  background: #edf8f2;
+  color: #245d49;
+  box-shadow: 0 12px 30px rgba(23, 48, 68, 0.16);
+  animation: toast-in 220ms var(--ease) both;
+}
+.portal-toast-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 50%;
+  background: #c9ead9;
+  color: #267455;
+}
+.portal-toast-message {
+  line-height: 1.4;
+}
+.portal-toast-close {
+  display: grid;
+  place-items: center;
+  margin-left: 8px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 * {
   box-sizing: border-box;
 }
@@ -488,6 +532,9 @@ p {
   background: linear-gradient(135deg, #ecf4f6, #ebf0ff);
   border-color: rgba(85, 121, 165, 0.2);
   color: var(--ink);
+}
+.assignment-row .table-action + .table-action {
+  margin-left: 8px;
 }
 .grading-context {
   display: grid;

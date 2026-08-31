@@ -8,6 +8,7 @@ import {
   archiveAssignment,
   createAssignment,
   listAssignments,
+  updateAssignment,
 } from "../../api/assignments";
 import { listBatches } from "../../api/batches";
 import { apiError } from "../../api/client";
@@ -17,13 +18,17 @@ import DataTable from "../../components/ui/DataTable";
 import AssignmentCreateModal from "./AssignmentCreateModal";
 import AssignmentDetailModal from "./AssignmentDetailModal";
 import AssignmentRow from "./AssignmentRow";
+import { hasPermission } from "../../lib/permissions";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 const [request, success, failure] = domainTypes.assignments;
 const EMPTY_FORM = { title: "", description: "", dueDate: "", batch: "" };
 
 export default function AssignmentsPage() {
   const user = useSelector(state => state.auth.user);
-  const canManage = ["admin", "teacher"].includes(user?.role);
+  const canCreate = hasPermission(user, "assignments.create");
+  const canEdit = hasPermission(user, "assignments.update");
+  const canDelete = hasPermission(user, "assignments.delete");
   const resource = useResource(
     "assignments",
     request,
@@ -35,6 +40,7 @@ export default function AssignmentsPage() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
+  const [editingAssignment, setEditingAssignment] = useState(null);
   const [closingId, setClosingId] = useState(null);
   const [notice, setNotice] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -81,6 +87,28 @@ export default function AssignmentsPage() {
     }
   };
 
+  const saveAssignment = async event => {
+    event.preventDefault();
+    if (!editingAssignment?._id) return;
+    setSubmitError("");
+    setNotice("");
+    try {
+      await updateAssignment(editingAssignment._id, {
+        ...form,
+        allowedFileTypes: ["zip"],
+        maxFileSizeMb: 50,
+        resubmissionPolicy: "disabled",
+      });
+      setOpen(false);
+      setEditingAssignment(null);
+      setForm(EMPTY_FORM);
+      setNotice("Assignment updated successfully.");
+      await resource.load();
+    } catch (error) {
+      setSubmitError(apiError(error));
+    }
+  };
+
   const closeAssignment = async id => {
     const confirmation = await Swal.fire({
       title: "Close assignment?",
@@ -120,7 +148,7 @@ export default function AssignmentsPage() {
         title="Assignments"
         description="Create briefs, keep deadlines visible, and see where learning is landing."
         action={
-          canManage && (
+          canCreate && (
             <Button
               className="btn-coral"
               onClick={() => {
@@ -133,11 +161,7 @@ export default function AssignmentsPage() {
           )
         }
       />
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       {submitError && (
         <Alert color="danger" fade={false}>
           {submitError}
@@ -157,7 +181,7 @@ export default function AssignmentsPage() {
           </div>
           <DataTable
             columns={
-              canManage
+              canEdit || canDelete
                 ? ["Assignment", "Batch", "Due date", "Status", "View", "Actions"]
                 : ["Assignment", "Batch", "Due date", "Status", "View"]
             }
@@ -173,9 +197,21 @@ export default function AssignmentsPage() {
               <AssignmentRow
                 key={item._id}
                 assignment={item}
-                canManage={canManage}
+                canEdit={canEdit}
+                canDelete={canDelete}
                 closingId={closingId}
                 onClose={closeAssignment}
+                onEdit={assignment => {
+                  setEditingAssignment(assignment);
+                  setForm({
+                    title: assignment.title || "",
+                    description: assignment.description || "",
+                    dueDate: assignment.dueDate || "",
+                    batch: assignment.batch?._id || assignment.batch || "",
+                  });
+                  setSubmitError("");
+                  setOpen(true);
+                }}
                 onView={setSelectedAssignment}
               />
             )}
@@ -194,7 +230,8 @@ export default function AssignmentsPage() {
         error={submitError}
         onClose={() => setOpen(false)}
         onChange={updateForm}
-        onSubmit={create}
+        onSubmit={editingAssignment ? saveAssignment : create}
+        mode={editingAssignment ? "edit" : "create"}
       />
     </>
   );

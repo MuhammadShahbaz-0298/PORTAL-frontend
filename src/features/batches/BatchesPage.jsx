@@ -19,6 +19,8 @@ import BatchCard from "./BatchCard";
 import BatchCreateModal from "./BatchCreateModal";
 import BatchEnrollmentModal from "./BatchEnrollmentModal";
 import { normalizePeople } from "./batchUtils";
+import { hasPermission } from "../../lib/permissions";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 export default function BatchesPage() {
   const user = useSelector(state => state.auth.user);
@@ -138,8 +140,10 @@ export default function BatchesPage() {
     }
   };
 
-  const canCreate = user?.role === "admin";
-  const canManage = user?.role === "admin";
+  const canCreate = hasPermission(user, "batches.create");
+  const canEdit = hasPermission(user, "batches.update");
+  const canDelete = hasPermission(user, "batches.delete");
+  const canEnroll = hasPermission(user, "batches.enroll");
 
   return (
     <>
@@ -173,11 +177,7 @@ export default function BatchesPage() {
           </Button>
         </Alert>
       )}
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       {batches.loading ? (
         <LoadingState />
       ) : (batches.data || []).length === 0 ? (
@@ -192,7 +192,9 @@ export default function BatchesPage() {
             <BatchCard
               key={batch._id}
               batch={batch}
-              canManage={canManage}
+              canEdit={canEdit}
+              canDelete={canDelete}
+              canEnroll={canEnroll}
               onEnroll={openEnroll}
               onEdit={batch => {
                 setEditingBatch(batch);

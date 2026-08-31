@@ -8,7 +8,7 @@ import Topbar from "./Topbar";
 import routesConfig from "../../routes-config";
 import { hasPermission } from "../../lib/permissions";
 import { LoadingState } from "../ui/PageHeader";
-import { INACTIVITY_TIMEOUT_MS, isSessionExpired, logout, touchSession } from "../../store/actions/authActions";
+import { INACTIVITY_TIMEOUT_MS, isSessionExpired, logout, refreshSession, touchSession } from "../../store/actions/authActions";
 
 export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -67,6 +67,16 @@ export default function AppLayout() {
       );
     };
   }, [dispatch, navigate, user]);
+
+  useEffect(() => {
+    const refresh = () => dispatch(refreshSession());
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [dispatch]);
 
   if (loading || (!user && localStorage.getItem("school_portal_token")))
     return <LoadingState text="Restoring your workspace…" />;

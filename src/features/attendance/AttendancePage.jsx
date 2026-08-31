@@ -22,6 +22,7 @@ import useApiResource from "../../hooks/useApiResource";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
 import SearchableSelect from "../../components/ui/SearchableSelect";
+import ToastNotification from "../../components/ui/ToastNotification";
 export default function AttendancePage() {
   const user = useSelector(state => state.auth.user);
   const studentId = user?.id || user?._id || user?.userId;
@@ -163,11 +164,7 @@ export default function AttendancePage() {
           ) : null
         }
       />
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       {error && !open && (
         <Alert color="danger" fade={false}>
           {error}
@@ -203,7 +200,9 @@ export default function AttendancePage() {
               <tr key={item._id}>
                 <td>{item.student?.name || item.student || "Student"}</td>
                 <td>{item.student?.email || "—"}</td>
-                <td>{item.batch?.name || item.batch || "Batch"}</td>
+                <td>
+                  {item.batch?.name || item.batchName || "Deleted batch"}
+                </td>
                 <td>
                   {item.date ? new Date(item.date).toLocaleDateString() : "—"}
                 </td>

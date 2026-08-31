@@ -16,6 +16,7 @@ import { KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
 import { useSelector } from "react-redux";
 import * as authApi from "../../api/auth";
 import { PageHeader } from "../../components/ui/PageHeader";
+import ToastNotification from "../../components/ui/ToastNotification";
 export default function ProfilePage() {
   const user = useSelector(state => state.auth.user);
   const [form, setForm] = useState({
@@ -125,11 +126,7 @@ export default function ProfilePage() {
                     {error}
                   </Alert>
                 )}
-                {notice && (
-                  <Alert color="success" fade={false}>
-                    {notice}
-                  </Alert>
-                )}
+                <ToastNotification message={notice} onClose={() => setNotice("")} />
                 <Button type="submit" className="btn-coral">
                   Update password
                 </Button>

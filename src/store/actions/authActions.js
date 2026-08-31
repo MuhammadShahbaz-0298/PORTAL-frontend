@@ -65,6 +65,20 @@ export const hydrateSession = () => async dispatch => {
     dispatch({ type: types.AUTH_LOGOUT });
   }
 };
+export const refreshSession = () => async dispatch => {
+  const token = localStorage.getItem(AUTH_STORAGE_KEYS.token);
+  if (!token) return;
+  try {
+    const { data } = await authApi.me();
+    localStorage.setItem(AUTH_STORAGE_KEYS.user, JSON.stringify(data));
+    dispatch({
+      type: types.AUTH_SUCCESS,
+      payload: { token, user: data },
+    });
+  } catch {
+    dispatch(logout());
+  }
+};
 export const logout = () => dispatch => {
   localStorage.removeItem(AUTH_STORAGE_KEYS.token);
   localStorage.removeItem(AUTH_STORAGE_KEYS.user);

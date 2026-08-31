@@ -28,10 +28,13 @@ export default function AssignmentCreateModal({
   onClose,
   onChange,
   onSubmit,
+  mode = "create",
 }) {
   return (
     <Modal isOpen={isOpen} toggle={onClose} fade={false} centered>
-      <ModalHeader toggle={onClose}>Create assignment</ModalHeader>
+      <ModalHeader toggle={onClose}>
+        {mode === "edit" ? "Edit assignment" : "Create assignment"}
+      </ModalHeader>
       <ModalBody>
         <Form onSubmit={onSubmit}>
           <FormGroup>
@@ -88,7 +91,7 @@ export default function AssignmentCreateModal({
             edit that submission before the deadline.
           </p>
           <Button type="submit" className="btn-coral w-100">
-            Create assignment
+            {mode === "edit" ? "Save changes" : "Create assignment"}
           </Button>
         </Form>
       </ModalBody>

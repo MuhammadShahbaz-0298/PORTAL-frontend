@@ -21,6 +21,7 @@ import { listAssignments } from "../../api/assignments";
 import useApiResource from "../../hooks/useApiResource";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
+import ToastNotification from "../../components/ui/ToastNotification";
 import SearchableSelect from "../../components/ui/SearchableSelect";
 export default function SubmissionsPage() {
   const user = useSelector(state => state.auth.user);
@@ -70,11 +71,7 @@ export default function SubmissionsPage() {
             : "Review learner work and open the grading desk."
         }
       />
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       <Card className="table-card">
         <CardBody>
           <DataTable

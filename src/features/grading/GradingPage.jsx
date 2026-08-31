@@ -19,6 +19,7 @@ import useApiResource from "../../hooks/useApiResource";
 import { apiError } from "../../api/client";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 const displayName = (value, fallback) =>
   value?.name || value?.title || value || fallback;
@@ -92,11 +93,7 @@ export default function GradingPage() {
         title="Grading"
         description="Review every submission in one table and edit marks only when needed."
       />
-      {notice && (
-        <Alert color="success" fade={false}>
-          {notice}
-        </Alert>
-      )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       {resource.error && (
         <Alert color="danger" fade={false}>
           {resource.error}

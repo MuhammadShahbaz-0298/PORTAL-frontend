@@ -25,6 +25,7 @@ import {
   LoadingState,
   ErrorState,
 } from "../../components/ui/PageHeader";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 const isExpired = assignment =>
   Boolean(assignment?.dueDate && new Date(assignment.dueDate) <= new Date());
@@ -170,11 +171,7 @@ export default function AssignmentDetailPage() {
                   edits are closed.
                 </Alert>
               )}
-              {notice && (
-                <Alert color="success" fade={false}>
-                  {notice}
-                </Alert>
-              )}
+              <ToastNotification message={notice} onClose={() => setNotice("")} />
               {openForSubmission && (
                 <Form onSubmit={saveSubmission}>
                   <FormGroup>
