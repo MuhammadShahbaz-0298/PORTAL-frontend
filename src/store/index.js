@@ -11,11 +11,11 @@ import {
   rolesReducer,
 } from "./reducers/resources";
 
-const savedUser = JSON.parse(localStorage.getItem("techzone_user") || "null");
+const savedUser = JSON.parse(localStorage.getItem("school_portal_user") || "null");
 const authInitial = {
   user: savedUser,
-  token: localStorage.getItem("techzone_token"),
-  loading: Boolean(localStorage.getItem("techzone_token")),
+  token: localStorage.getItem("school_portal_token"),
+  loading: Boolean(localStorage.getItem("school_portal_token")),
   error: null,
 };
 export const authReducer = (state = authInitial, action) => {

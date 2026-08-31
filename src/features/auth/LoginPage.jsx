@@ -4,6 +4,7 @@ import { Form, FormGroup, Input, Label, Button, Alert } from "reactstrap";
 import { ArrowUpRight } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "@tanstack/react-router";
+import Swal from "sweetalert2";
 import { login } from "../../store/actions/authActions";
 import { env } from "../../config/env";
 export default function LoginPage() {
@@ -17,7 +18,18 @@ export default function LoginPage() {
     try {
       await dispatch(login(form));
       navigate({ to: "/dashboard" });
-    } catch {}
+    } catch (loginError) {
+      const message =
+        loginError?.message ||
+        "Your account has been suspended or banned. Please contact your administrator.";
+      Swal.fire({
+        title: "Unable to sign in",
+        text: message,
+        icon: "warning",
+        confirmButtonColor: "#173044",
+        confirmButtonText: "OK",
+      });
+    }
   };
   return (
     <div className="login-page">
@@ -36,7 +48,7 @@ export default function LoginPage() {
             <i />
           </span>
           <span>
-            <strong>techzone</strong>
+            <strong>CompanyName</strong>
             <small>learning operations</small>
           </span>
         </div>
@@ -55,7 +67,7 @@ export default function LoginPage() {
               id="email"
               type="email"
               autoComplete="username"
-              placeholder="you@techzone.edu"
+              placeholder="you@school.edu"
               value={form.email}
               onChange={event =>
                 setForm({ ...form, email: event.target.value })

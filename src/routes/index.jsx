@@ -38,7 +38,7 @@ const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
   beforeLoad: ({ context }) => {
-    if (!context.auth.user && !localStorage.getItem("techzone_token"))
+    if (!context.auth.user && !localStorage.getItem("school_portal_token"))
       throw redirect({ to: "/login" });
   },
   component: AppLayout,

@@ -22,6 +22,13 @@ export default function DashboardPage() {
   const batches = useResource("batches", br, bs, bf, listBatches);
   const showBatches = role === "admin" || role === "teacher";
 
+  const now = new Date();
+  const currentHour = now.getHours();
+  const greeting = currentHour < 12 ? "Good Morning." : "Good Evening.";
+  const dayName = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+  }).format(now);
+
   useEffect(() => {
     assignments.load().catch(() => {});
     submissions.load().catch(() => {});
@@ -48,8 +55,8 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Monday · school overview"
-        title="Good morning."
+        eyebrow={`${dayName} · overview`}
+        title={greeting}
         description="A clear view of the people, work, and signals that need attention today."
         action={
           <Link className="btn btn-coral" to="/assignments">
@@ -115,18 +122,6 @@ export default function DashboardPage() {
             )}
           </CardBody>
         </Card>
-        <aside className="context-card">
-          <div className="context-copy">
-            <div className="eyebrow">Field note</div>
-            <h3>Small signals add up.</h3>
-            <p>
-              Attendance, feedback, and submission status belong in the same
-              conversation.
-            </p>
-            <div className="context-rule" />
-            <span>Techzone principle · 04</span>
-          </div>
-        </aside>
       </div>
     </>
   );

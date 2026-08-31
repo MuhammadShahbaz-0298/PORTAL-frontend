@@ -11,6 +11,15 @@ import {
 } from "reactstrap";
 import SearchableSelect from "../../components/ui/SearchableSelect";
 
+const toAssignmentDateInput = value => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16);
+};
+
 export default function AssignmentCreateModal({
   isOpen,
   form,
@@ -60,8 +69,13 @@ export default function AssignmentCreateModal({
               id="assignment-due"
               type="datetime-local"
               required
-              value={form.dueDate}
-              onChange={event => onChange("dueDate", event.target.value)}
+              value={toAssignmentDateInput(form.dueDate)}
+              onChange={event => {
+                const raw = event.target.value;
+                if (!raw) return onChange("dueDate", "");
+                const localDate = new Date(raw);
+                onChange("dueDate", localDate.toISOString());
+              }}
             />
           </FormGroup>
           {error && (

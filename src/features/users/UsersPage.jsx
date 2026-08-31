@@ -13,11 +13,11 @@ import {
   ModalBody,
   ModalHeader,
 } from "reactstrap";
-import { Check, Copy, Plus, Search, UserX } from "lucide-react";
+import { Check, Copy, MoreHorizontal, Plus, Search } from "lucide-react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { register } from "../../api/auth";
-import { listUsers, deactivateUser } from "../../api/users";
+import { listUsers, updateUser, deleteUser } from "../../api/users";
 import { listRoles } from "../../api/roles";
 import useApiResource from "../../hooks/useApiResource";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
@@ -53,7 +53,7 @@ export default function UsersPage() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [credentials, setCredentials] = useState(null);
-  const [deactivating, setDeactivating] = useState(null);
+  const [actioning, setActioning] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     name: "",
@@ -86,35 +86,76 @@ export default function UsersPage() {
     }
   };
 
-  const deactivate = async account => {
-    const confirmation = await Swal.fire({
-      title: "Deactivate account?",
-      text: `${account.name || "This account"} will be prevented from signing in.`,
-      icon: "warning",
+  const openUserActions = async account => {
+    const shouldActivate = account.active === false;
+    const result = await Swal.fire({
+      title: "Manage account",
+      text: `${account.name || "This user"} (${account.role})`,
+      icon: "question",
+      showDenyButton: true,
       showCancelButton: true,
-      confirmButtonText: "Deactivate",
-      cancelButtonText: "Keep active",
-      confirmButtonColor: "#b8563d",
+      confirmButtonText: shouldActivate ? "Activate" : "Deactivate",
+      denyButtonText: "Delete",
+      cancelButtonText: "Close",
+      confirmButtonColor: shouldActivate ? "#173044" : "#b8563d",
+      denyButtonColor: "#b8563d",
       cancelButtonColor: "#173044",
       reverseButtons: true,
       customClass: {
         popup: "swal-linen",
         confirmButton: "swal-confirm",
+        denyButton: "swal-delete",
         cancelButton: "swal-cancel",
       },
     });
-    if (!confirmation.isConfirmed) return;
-    setDeactivating(account._id);
-    setError("");
-    try {
-      await deactivateUser(account._id);
-      await resource.reload();
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.error || "Unable to deactivate account."
-      );
-    } finally {
-      setDeactivating(null);
+
+    if (result.isConfirmed) {
+      setActioning(account._id);
+      setError("");
+      try {
+        await updateUser(account._id, { active: shouldActivate });
+        await resource.reload();
+      } catch (requestError) {
+        setError(
+          requestError.response?.data?.error ||
+            `Unable to ${shouldActivate ? "activate" : "deactivate"} account.`
+        );
+      } finally {
+        setActioning(null);
+      }
+      return;
+    }
+
+    if (result.isDenied) {
+      const confirmation = await Swal.fire({
+        title: "Delete user?",
+        text: `${account.name || "This user"} will be permanently removed from the system.`,
+        icon: "error",
+        showCancelButton: true,
+        confirmButtonText: "Delete user",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#b8563d",
+        cancelButtonColor: "#173044",
+        reverseButtons: true,
+        customClass: {
+          popup: "swal-linen",
+          confirmButton: "swal-confirm",
+          cancelButton: "swal-cancel",
+        },
+      });
+
+      if (!confirmation.isConfirmed) return;
+
+      setActioning(account._id);
+      setError("");
+      try {
+        await deleteUser(account._id);
+        await resource.reload();
+      } catch (requestError) {
+        setError(requestError.response?.data?.error || "Unable to delete user.");
+      } finally {
+        setActioning(null);
+      }
     }
   };
 
@@ -166,21 +207,23 @@ export default function UsersPage() {
                 <td>
                   <StatusBadge tone="blue">{item.role}</StatusBadge>
                 </td>
-                <td>{item.active === false ? "Inactive" : "Active"}</td>
                 <td>
-                  {item.active === false ? (
-                    <span className="muted">Inactive</span>
-                  ) : (
+                  <StatusBadge tone={item.active === false ? "danger" : "success"}>
+                    {item.active === false ? "Inactive" : "Active"}
+                  </StatusBadge>
+                </td>
+                <td className="table-actions-cell">
+                  <div className="table-inline-actions">
                     <Button
-                      color="link"
-                      className="icon-button"
-                      disabled={deactivating === item._id}
-                      onClick={() => deactivate(item)}
-                      aria-label={`Deactivate ${item.name}`}
+                      color="light"
+                      className="table-action"
+                      disabled={actioning === item._id}
+                      onClick={() => openUserActions(item)}
+                      aria-label={`Manage ${item.name}`}
                     >
-                      <UserX size={16} />
+                      <MoreHorizontal size={15} /> Actions
                     </Button>
-                  )}
+                  </div>
                 </td>
               </tr>
             )}

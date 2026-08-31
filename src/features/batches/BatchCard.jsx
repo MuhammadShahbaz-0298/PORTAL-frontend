@@ -1,8 +1,8 @@
-import { UserPlus } from "lucide-react";
+import { Pencil, Trash2, UserPlus } from "lucide-react";
 import { Button, Card, CardBody } from "reactstrap";
 import { getLearnerCount } from "./batchUtils";
 
-export default function BatchCard({ batch, canManage, onEnroll }) {
+export default function BatchCard({ batch, canManage, onEnroll, onEdit, onDelete }) {
   return (
     <Card className="batch-card">
       <CardBody>
@@ -12,9 +12,17 @@ export default function BatchCard({ batch, canManage, onEnroll }) {
         <div className="batch-card-footer">
           <span className="muted">{getLearnerCount(batch)} learners</span>
           {canManage && (
-            <Button color="light" onClick={() => onEnroll(batch)}>
-              <UserPlus size={15} /> Enroll students
-            </Button>
+            <div className="batch-actions">
+              <Button color="light" onClick={() => onEnroll(batch)}>
+                <UserPlus size={15} /> Enroll
+              </Button>
+              <Button color="light" onClick={() => onEdit(batch)}>
+                <Pencil size={15} /> Edit
+              </Button>
+              <Button color="light" onClick={() => onDelete(batch)} className="btn-delete-soft">
+                <Trash2 size={15} /> Delete
+              </Button>
+            </div>
           )}
         </div>
       </CardBody>

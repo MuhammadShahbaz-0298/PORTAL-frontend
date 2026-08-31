@@ -7,7 +7,7 @@ const client = axios.create({
 });
 
 client.interceptors.request.use(request => {
-  const token = localStorage.getItem("techzone_token");
+  const token = localStorage.getItem("school_portal_token");
   if (token) request.headers.Authorization = `Bearer ${token}`;
   return request;
 });

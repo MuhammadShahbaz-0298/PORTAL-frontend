@@ -1,10 +1,13 @@
 import { useCallback, useState } from "react";
 import { Alert, Button } from "reactstrap";
-import { Plus } from "lucide-react";
+import { Inbox, Plus } from "lucide-react";
 import { useSelector } from "react-redux";
+import Swal from "sweetalert2";
 import {
   listBatches,
   createBatch,
+  updateBatch,
+  deleteBatch,
   enrollStudent,
   listBatchStudents,
 } from "../../api/batches";
@@ -22,6 +25,7 @@ export default function BatchesPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [editingBatch, setEditingBatch] = useState(null);
   const [enrolled, setEnrolled] = useState([]);
   const [studentId, setStudentId] = useState("");
   const [error, setError] = useState("");
@@ -70,6 +74,51 @@ export default function BatchesPage() {
     }
   };
 
+  const submitUpdate = async form => {
+    if (!editingBatch?._id) return false;
+    setError("");
+    try {
+      await updateBatch(editingBatch._id, form);
+      setCreateOpen(false);
+      setEditingBatch(null);
+      setNotice("Batch updated successfully.");
+      await batches.reload();
+      return true;
+    } catch (requestError) {
+      setError(apiError(requestError));
+      return false;
+    }
+  };
+
+  const deleteSelectedBatch = async batch => {
+    const confirmation = await Swal.fire({
+      title: "Delete batch?",
+      text: `This will remove ${batch.name} and its enrollments. This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete batch",
+      cancelButtonText: "Keep it",
+      confirmButtonColor: "#b8563d",
+      cancelButtonColor: "#173044",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal-linen",
+        confirmButton: "swal-confirm",
+        cancelButton: "swal-cancel",
+      },
+    });
+    if (!confirmation.isConfirmed) return;
+
+    setError("");
+    try {
+      await deleteBatch(batch._id);
+      setNotice("Batch removed successfully.");
+      await batches.reload();
+    } catch (requestError) {
+      setError(apiError(requestError));
+    }
+  };
+
   const submitEnroll = async event => {
     event.preventDefault();
     setError("");
@@ -90,7 +139,7 @@ export default function BatchesPage() {
   };
 
   const canCreate = user?.role === "admin";
-  const canManage = canCreate || user?.role === "teacher";
+  const canManage = user?.role === "admin";
 
   return (
     <>
@@ -131,6 +180,12 @@ export default function BatchesPage() {
       )}
       {batches.loading ? (
         <LoadingState />
+      ) : (batches.data || []).length === 0 ? (
+        <div className="empty-state empty-state-inline">
+          <Inbox size={28} />
+          <strong>No batches yet</strong>
+          <span>Create your first batch to start assigning students.</span>
+        </div>
       ) : (
         <div className="batch-grid">
           {(batches.data || []).map(batch => (
@@ -139,6 +194,12 @@ export default function BatchesPage() {
               batch={batch}
               canManage={canManage}
               onEnroll={openEnroll}
+              onEdit={batch => {
+                setEditingBatch(batch);
+                setError("");
+                setCreateOpen(true);
+              }}
+              onDelete={deleteSelectedBatch}
             />
           ))}
         </div>
@@ -147,8 +208,18 @@ export default function BatchesPage() {
         isOpen={createOpen}
         teachers={teachers}
         error={error}
-        onClose={() => setCreateOpen(false)}
-        onSubmit={submitCreate}
+        onClose={() => {
+          setCreateOpen(false);
+          setEditingBatch(null);
+          setError("");
+        }}
+        onSubmit={editingBatch ? submitUpdate : submitCreate}
+        mode={editingBatch ? "edit" : "create"}
+        initialValues={
+          editingBatch
+            ? { name: editingBatch.name, teacherId: editingBatch.teacher?._id || editingBatch.teacher || "" }
+            : undefined
+        }
       />
       <BatchEnrollmentModal
         isOpen={enrollOpen}

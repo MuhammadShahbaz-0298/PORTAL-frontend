@@ -15,6 +15,7 @@ import { domainTypes, useResource } from "../../hooks/useResource";
 import { PageHeader } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
 import AssignmentCreateModal from "./AssignmentCreateModal";
+import AssignmentDetailModal from "./AssignmentDetailModal";
 import AssignmentRow from "./AssignmentRow";
 
 const [request, success, failure] = domainTypes.assignments;
@@ -33,6 +34,7 @@ export default function AssignmentsPage() {
   const [batchOptions, setBatchOptions] = useState([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState(null);
   const [closingId, setClosingId] = useState(null);
   const [notice, setNotice] = useState("");
   const [submitError, setSubmitError] = useState("");
@@ -156,8 +158,8 @@ export default function AssignmentsPage() {
           <DataTable
             columns={
               canManage
-                ? ["Assignment", "Batch", "Due date", "Status", "Actions"]
-                : ["Assignment", "Batch", "Due date", "Status"]
+                ? ["Assignment", "Batch", "Due date", "Status", "View", "Actions"]
+                : ["Assignment", "Batch", "Due date", "Status", "View"]
             }
             rows={rows}
             loading={resource.loading}
@@ -174,11 +176,17 @@ export default function AssignmentsPage() {
                 canManage={canManage}
                 closingId={closingId}
                 onClose={closeAssignment}
+                onView={setSelectedAssignment}
               />
             )}
           />
         </CardBody>
       </Card>
+      <AssignmentDetailModal
+        isOpen={Boolean(selectedAssignment)}
+        assignment={selectedAssignment}
+        onClose={() => setSelectedAssignment(null)}
+      />
       <AssignmentCreateModal
         isOpen={open}
         form={form}

@@ -12,13 +12,9 @@ export default function Topbar({ onOpenMenu }) {
       >
         <Menu size={20} />
       </button>
-      <div className="breadcrumb">
+      <div className="breadcrumb mt-3">
         CompanyName <span>›</span>{" "}
         <strong>{location.pathname.split("/")[1] || "dashboard"}</strong>
-      </div>
-      <div className="top-actions">
-        <span className="workspace-label">School workspace</span>
-        <MoreHorizontal size={18} />
       </div>
     </header>
   );

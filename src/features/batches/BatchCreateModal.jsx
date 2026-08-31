@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
@@ -20,8 +20,21 @@ export default function BatchCreateModal({
   error,
   onClose,
   onSubmit,
+  initialValues,
+  mode = "create",
 }) {
   const [form, setForm] = useState(INITIAL_FORM);
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(
+        initialValues || {
+          name: "",
+          teacherId: "",
+        }
+      );
+    }
+  }, [isOpen, initialValues]);
 
   const handleSubmit = async event => {
     event.preventDefault();
@@ -32,7 +45,9 @@ export default function BatchCreateModal({
 
   return (
     <Modal isOpen={isOpen} toggle={onClose} fade={false} centered>
-      <ModalHeader toggle={onClose}>Create batch</ModalHeader>
+      <ModalHeader toggle={onClose}>
+        {mode === "edit" ? "Update batch" : "Create batch"}
+      </ModalHeader>
       <ModalBody>
         <Form onSubmit={handleSubmit}>
           <FormGroup>
@@ -73,7 +88,7 @@ export default function BatchCreateModal({
             className="btn-coral w-100"
             disabled={teachers.loading || Boolean(teachers.error)}
           >
-            Create batch
+            {mode === "edit" ? "Save changes" : "Create batch"}
           </Button>
         </Form>
       </ModalBody>

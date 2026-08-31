@@ -1,11 +1,11 @@
-/* Brand component: owns only the Techzone mark and wordmark. */
+/* Brand component: owns only the portal mark and wordmark. */
 import { env } from "../../config/env";
 export default function Brand() {
   return (
     <div className="brand">
       <img
         src={env.appLogo}
-        alt="Techzone"
+        alt="Portal brand"
         onError={event => {
           event.currentTarget.style.display = "none";
         }}

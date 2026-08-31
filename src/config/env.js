@@ -7,8 +7,8 @@ export const env = {
   apiUrl: normalizedApiUrl.endsWith("/api")
     ? normalizedApiUrl
     : `${normalizedApiUrl}/api`,
-  appTitle: import.meta.env.VITE_APP_TITLE || "Techzone School Portal",
+  appTitle: import.meta.env.VITE_APP_TITLE || "School Portal",
   appLogo:
     import.meta.env.VITE_APP_LOGO ||
-    "/manus-storage/techzone-mark_03a185d6.png",
+    "/manus-storage/portal-mark.png",
 };
