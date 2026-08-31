@@ -23,6 +23,7 @@ import useApiResource from "../../hooks/useApiResource";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
 import SearchableSelect from "../../components/ui/SearchableSelect";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 const generatePassword = () =>
   `${crypto.randomUUID().slice(0, 8)}${Math.floor(Math.random() * 90 + 10)}`;
@@ -55,6 +56,7 @@ export default function UsersPage() {
   const [credentials, setCredentials] = useState(null);
   const [actioning, setActioning] = useState(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -80,6 +82,7 @@ export default function UsersPage() {
       setCredentials({ email: form.email, password });
       setOpen(false);
       setForm({ name: "", email: "", role: "student", batchId: "" });
+      setNotice("User account created successfully.");
       await resource.reload();
     } catch (requestError) {
       setError(requestError.response?.data?.error || "Unable to create user.");
@@ -114,6 +117,9 @@ export default function UsersPage() {
       setError("");
       try {
         await updateUser(account._id, { active: shouldActivate });
+        setNotice(
+          `${account.name || "User"} ${shouldActivate ? "activated" : "deactivated"} successfully.`,
+        );
         await resource.reload();
       } catch (requestError) {
         setError(
@@ -150,6 +156,7 @@ export default function UsersPage() {
       setError("");
       try {
         await deleteUser(account._id);
+        setNotice(`${account.name || "User"} deleted permanently.`);
         await resource.reload();
       } catch (requestError) {
         setError(requestError.response?.data?.error || "Unable to delete user.");
@@ -182,6 +189,7 @@ export default function UsersPage() {
           {error}
         </Alert>
       )}
+      <ToastNotification message={notice} onClose={() => setNotice("")} />
       <Card className="table-card">
         <CardBody>
           <div className="toolbar">
