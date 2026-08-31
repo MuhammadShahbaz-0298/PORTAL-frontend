@@ -1,7 +1,6 @@
 /* Submissions feature: student upload plus teacher/admin review and student grade visibility. */
 import { useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -71,7 +70,14 @@ export default function SubmissionsPage() {
             : "Review learner work and open the grading desk."
         }
       />
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
+      <ToastNotification
+        message={error || notice}
+        variant={error ? "error" : "success"}
+        onClose={() => {
+          setError("");
+          setNotice("");
+        }}
+      />
       <Card className="table-card">
         <CardBody>
           <DataTable
@@ -144,11 +150,6 @@ export default function SubmissionsPage() {
                   onChange={event => setFile(event.target.files?.[0])}
                 />
               </FormGroup>
-              {error && (
-                <Alert color="danger" fade={false}>
-                  {error}
-                </Alert>
-              )}
               <Button type="submit" className="btn-coral">
                 <Upload size={15} /> Upload submission
               </Button>

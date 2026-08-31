@@ -1,7 +1,6 @@
 /* Users feature: admin account creation and account lifecycle controls with SweetAlert confirmations. */
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -184,12 +183,14 @@ export default function UsersPage() {
           </Button>
         }
       />
-      {error && (
-        <Alert color="danger" fade={false}>
-          {error}
-        </Alert>
-      )}
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
+      <ToastNotification
+        message={error || notice}
+        variant={error ? "error" : "success"}
+        onClose={() => {
+          setError("");
+          setNotice("");
+        }}
+      />
       <Card className="table-card">
         <CardBody>
           <div className="toolbar">
@@ -273,11 +274,11 @@ export default function UsersPage() {
               getLabel={role => role.label || role.name || role.role}
               onChange={value => setForm({ ...form, role: value })}
             />
-            {error && (
-              <Alert color="danger" fade={false}>
-                {error}
-              </Alert>
-            )}
+            <ToastNotification
+              message={error}
+              variant="error"
+              onClose={() => setError("")}
+            />
             <p className="form-note">
               A one-time password is generated after creation and shown only in
               the confirmation panel.

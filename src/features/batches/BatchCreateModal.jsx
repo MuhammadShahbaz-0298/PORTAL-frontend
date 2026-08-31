@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Button,
   Form,
   FormGroup,
@@ -60,11 +59,6 @@ export default function BatchCreateModal({
               }
             />
           </FormGroup>
-          {teachers.error && (
-            <Alert color="warning" fade={false}>
-              {teachers.error}
-            </Alert>
-          )}
           <SearchableSelect
             label="Teacher"
             placeholder="Search teachers"
@@ -78,11 +72,6 @@ export default function BatchCreateModal({
               setForm(current => ({ ...current, teacherId }))
             }
           />
-          {error && (
-            <Alert color="danger" fade={false}>
-              {error}
-            </Alert>
-          )}
           <Button
             type="submit"
             className="btn-coral w-100"

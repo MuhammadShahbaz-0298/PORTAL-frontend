@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Alert, Button, Form, Modal, ModalBody, ModalHeader } from "reactstrap";
+import { Button, Form, Modal, ModalBody, ModalHeader } from "reactstrap";
 import SearchableSelect from "../../components/ui/SearchableSelect";
 
 export default function BatchEnrollmentModal({
@@ -33,11 +33,6 @@ export default function BatchEnrollmentModal({
       </ModalHeader>
       <ModalBody>
         <Form onSubmit={onSubmit}>
-          {students.error && (
-            <Alert color="warning" fade={false}>
-              {students.error}
-            </Alert>
-          )}
           <SearchableSelect
             label="Student not yet enrolled"
             placeholder="Search students"
@@ -67,11 +62,6 @@ export default function BatchEnrollmentModal({
                 All active students are enrolled in this batch.
               </p>
             )}
-          {error && (
-            <Alert color="danger" fade={false}>
-              {error}
-            </Alert>
-          )}
           <Button
             type="submit"
             className="btn-coral w-100"

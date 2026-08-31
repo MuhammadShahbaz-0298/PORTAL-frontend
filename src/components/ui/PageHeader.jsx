@@ -1,5 +1,6 @@
 /* Shared UI exports kept filename-compatible with the reference structure. */
-import { Alert, Spinner } from "reactstrap";
+import { Spinner } from "reactstrap";
+import ToastNotification from "./ToastNotification";
 export function PageHeader({ eyebrow, title, description, action }) {
   return (
     <div className="page-header">
@@ -24,9 +25,7 @@ export function LoadingState({ text = "Loading…" }) {
 }
 export function ErrorState({ message = "Unable to load this section." }) {
   return (
-    <Alert color="danger" className="error-state">
-      {message}
-    </Alert>
+    <ToastNotification message={message} variant="error" onClose={() => {}} />
   );
 }
 export default PageHeader;

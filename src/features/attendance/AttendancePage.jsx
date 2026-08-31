@@ -1,7 +1,6 @@
 /* Attendance feature: batch checklist marking with student history for learners. */
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -164,12 +163,14 @@ export default function AttendancePage() {
           ) : null
         }
       />
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
-      {error && !open && (
-        <Alert color="danger" fade={false}>
-          {error}
-        </Alert>
-      )}
+      <ToastNotification
+        message={error || notice}
+        variant={error ? "error" : "success"}
+        onClose={() => {
+          setError("");
+          setNotice("");
+        }}
+      />
       <Card className="table-card">
         <CardBody>
           <div className="toolbar">
@@ -271,11 +272,11 @@ export default function AttendancePage() {
                 </p>
               )}
             </div>
-            {error && (
-              <Alert color="danger" fade={false}>
-                {error}
-              </Alert>
-            )}
+            <ToastNotification
+              message={error}
+              variant="error"
+              onClose={() => setError("")}
+            />
             <Button
               type="submit"
               className="btn-coral w-100"

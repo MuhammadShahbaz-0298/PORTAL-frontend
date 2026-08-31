@@ -1,5 +1,6 @@
 /* AsyncState: shared loading, error, and empty-state behavior. */
-import { Alert, Button, Spinner } from "reactstrap";
+import { Spinner } from "reactstrap";
+import ToastNotification from "./ToastNotification";
 export function LoadingState({ text = "Loading…" }) {
   return (
     <div className="loading-state">
@@ -12,14 +13,10 @@ export function ErrorState({
   onRetry,
 }) {
   return (
-    <Alert color="danger" className="error-state">
-      <span>{message}</span>
-      {onRetry && (
-        <Button color="link" className="retry-button" onClick={onRetry}>
-          Try again
-        </Button>
-      )}
-    </Alert>
+    <>
+      <ToastNotification message={message} variant="error" onClose={() => {}} />
+      {onRetry && onRetry()}
+    </>
   );
 }
 export function EmptyState({

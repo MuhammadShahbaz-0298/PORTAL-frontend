@@ -1,12 +1,13 @@
 /* Auth feature: accessible login form for the inspected /api/auth/login contract. */
 import { useState } from "react";
-import { Form, FormGroup, Input, Label, Button, Alert } from "reactstrap";
+import { Form, FormGroup, Input, Label, Button } from "reactstrap";
 import { ArrowUpRight } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "@tanstack/react-router";
 import Swal from "sweetalert2";
 import { login } from "../../store/actions/authActions";
 import { env } from "../../config/env";
+import ToastNotification from "../../components/ui/ToastNotification";
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -56,11 +57,11 @@ export default function LoginPage() {
           <span className="eyebrow">Portal sign in</span>
           <h2>Welcome back.</h2>
           <p>Use your school account to continue.</p>
-          {error && (
-            <Alert color="danger" fade={false}>
-              {error}
-            </Alert>
-          )}
+          <ToastNotification
+            message={error}
+            variant="error"
+            onClose={() => {}}
+          />
           <FormGroup>
             <Label for="email">Email address</Label>
             <Input

@@ -121,12 +121,14 @@ export default function ProfilePage() {
                     }
                   />
                 </FormGroup>
-                {error && (
-                  <Alert color="danger" fade={false}>
-                    {error}
-                  </Alert>
-                )}
-                <ToastNotification message={notice} onClose={() => setNotice("")} />
+                <ToastNotification
+                  message={error || notice}
+                  variant={error ? "error" : "success"}
+                  onClose={() => {
+                    setError("");
+                    setNotice("");
+                  }}
+                />
                 <Button type="submit" className="btn-coral">
                   Update password
                 </Button>

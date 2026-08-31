@@ -154,7 +154,11 @@ export default function RolesPage() {
           </Button>
         }
       />
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
+      <ToastNotification
+        message={notice}
+        variant="success"
+        onClose={() => setNotice("")}
+      />
       <Card className="table-card">
         <CardBody>
           <DataTable
@@ -248,11 +252,11 @@ export default function RolesPage() {
                 </div>
               ))}
             </div>
-            {error && (
-              <Alert color="danger" fade={false}>
-                {error}
-              </Alert>
-            )}
+            <ToastNotification
+              message={error}
+              variant="error"
+              onClose={() => setError("")}
+            />
             <Button type="submit" className="btn-coral w-100">
               {editing ? "Save role changes" : "Create role"}
             </Button>

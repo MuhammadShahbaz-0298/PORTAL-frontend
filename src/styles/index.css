@@ -22,12 +22,19 @@
   gap: 10px;
   max-width: min(420px, calc(100vw - 32px));
   padding: 13px 14px;
-  border: 1px solid #a7d7c3;
   border-radius: 8px;
-  background: #edf8f2;
-  color: #245d49;
   box-shadow: 0 12px 30px rgba(23, 48, 68, 0.16);
   animation: toast-in 220ms var(--ease) both;
+}
+.portal-toast-success {
+  border: 1px solid #a7d7c3;
+  background: #edf8f2;
+  color: #245d49;
+}
+.portal-toast-error {
+  border: 1px solid #f0b5af;
+  background: #fff1f0;
+  color: #8d2d2f;
 }
 .portal-toast-icon {
   display: grid;
@@ -36,8 +43,16 @@
   height: 24px;
   flex: none;
   border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: currentColor;
+}
+.portal-toast-success .portal-toast-icon {
   background: #c9ead9;
   color: #267455;
+}
+.portal-toast-error .portal-toast-icon {
+  background: #f9d7d4;
+  color: #a63636;
 }
 .portal-toast-message {
   line-height: 1.4;

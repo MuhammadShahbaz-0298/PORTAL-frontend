@@ -1,7 +1,6 @@
 /* Assignment detail feature: lifecycle-aware brief view with one submission and edit-only replacement. */
 import { useEffect, useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -166,12 +165,16 @@ export default function AssignmentDetailPage() {
                 </p>
               )}
               {!openForSubmission && (
-                <Alert color="warning" fade={false}>
-                  This assignment is {status.toLowerCase()}; new uploads and
-                  edits are closed.
-                </Alert>
+                <ToastNotification
+                  message={`This assignment is ${status.toLowerCase()}; new uploads and edits are closed.`}
+                  onClose={() => setNotice("")}
+                />
               )}
-              <ToastNotification message={notice} onClose={() => setNotice("")} />
+              <ToastNotification
+                message={notice}
+                variant="success"
+                onClose={() => setNotice("")}
+              />
               {openForSubmission && (
                 <Form onSubmit={saveSubmission}>
                   <FormGroup>

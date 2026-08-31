@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Card, CardBody } from "reactstrap";
+import { Button, Card, CardBody } from "reactstrap";
 import { Plus, Search } from "lucide-react";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
@@ -161,12 +161,14 @@ export default function AssignmentsPage() {
           )
         }
       />
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
-      {submitError && (
-        <Alert color="danger" fade={false}>
-          {submitError}
-        </Alert>
-      )}
+      <ToastNotification
+        message={submitError || notice}
+        variant={submitError ? "error" : "success"}
+        onClose={() => {
+          setSubmitError("");
+          setNotice("");
+        }}
+      />
       <Card className="table-card">
         <CardBody>
           <div className="toolbar">

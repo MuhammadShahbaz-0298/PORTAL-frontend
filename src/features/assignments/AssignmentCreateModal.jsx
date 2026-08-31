@@ -1,5 +1,4 @@
 import {
-  Alert,
   Button,
   Form,
   FormGroup,
@@ -10,6 +9,7 @@ import {
   ModalHeader,
 } from "reactstrap";
 import SearchableSelect from "../../components/ui/SearchableSelect";
+import ToastNotification from "../../components/ui/ToastNotification";
 
 const toAssignmentDateInput = value => {
   if (!value) return "";
@@ -81,11 +81,11 @@ export default function AssignmentCreateModal({
               }}
             />
           </FormGroup>
-          {error && (
-            <Alert color="danger" fade={false}>
-              {error}
-            </Alert>
-          )}
+          <ToastNotification
+            message={error}
+            variant="error"
+            onClose={() => {}}
+          />
           <p className="form-note">
             ZIP uploads are capped at 50 MB. Each student can submit once and
             edit that submission before the deadline.

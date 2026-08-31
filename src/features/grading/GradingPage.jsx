@@ -1,7 +1,6 @@
 /* Grading page: records stay visible in a table; grade changes require an explicit row action. */
 import { useMemo, useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
@@ -93,19 +92,14 @@ export default function GradingPage() {
         title="Grading"
         description="Review every submission in one table and edit marks only when needed."
       />
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
-      {resource.error && (
-        <Alert color="danger" fade={false}>
-          {resource.error}
-          <Button
-            color="link"
-            className="retry-button"
-            onClick={() => resource.reload()}
-          >
-            Try again
-          </Button>
-        </Alert>
-      )}
+      <ToastNotification
+        message={resource.error || notice}
+        variant={resource.error ? "error" : "success"}
+        onClose={() => {
+          if (resource.error) resource.reload();
+          setNotice("");
+        }}
+      />
       <Card className="table-card">
         <CardBody>
           <div className="table-toolbar">
@@ -238,11 +232,11 @@ export default function GradingPage() {
                 placeholder="Add useful feedback for the learner"
               />
             </FormGroup>
-            {error && (
-              <Alert color="danger" fade={false}>
-                {error}
-              </Alert>
-            )}
+            <ToastNotification
+              message={error}
+              variant="error"
+              onClose={() => setError("")}
+            />
             <div className="modal-actions">
               <Button type="button" color="light" onClick={closeEditor}>
                 Cancel

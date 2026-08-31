@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Alert, Button } from "reactstrap";
+import { Button } from "reactstrap";
 import { Inbox, Plus } from "lucide-react";
 import { useSelector } from "react-redux";
 import Swal from "sweetalert2";
@@ -165,19 +165,14 @@ export default function BatchesPage() {
           )
         }
       />
-      {batches.error && (
-        <Alert color="danger" fade={false}>
-          {batches.error}
-          <Button
-            color="link"
-            className="retry-button"
-            onClick={batches.reload}
-          >
-            Try again
-          </Button>
-        </Alert>
-      )}
-      <ToastNotification message={notice} onClose={() => setNotice("")} />
+      <ToastNotification
+        message={batches.error || notice}
+        variant={batches.error ? "error" : "success"}
+        onClose={() => {
+          if (batches.error) batches.reload();
+          setNotice("");
+        }}
+      />
       {batches.loading ? (
         <LoadingState />
       ) : (batches.data || []).length === 0 ? (
