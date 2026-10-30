@@ -12,10 +12,20 @@ export const uploadSubmission = (assignmentId, file, onUploadProgress) =>
     headers: { "Content-Type": "multipart/form-data" },
     onUploadProgress,
   });
-export const updateSubmissionFile = (submissionId, file) =>
+export const updateSubmissionFile = (submissionId, file, onUploadProgress) =>
   client.patch(`/submissions/${submissionId}/file`, submissionForm("", file), {
     headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress,
   });
+export const saveSubmissionFile = ({
+  assignmentId,
+  submissionId,
+  file,
+  onUploadProgress,
+}) =>
+  submissionId
+    ? updateSubmissionFile(submissionId, file, onUploadProgress)
+    : uploadSubmission(assignmentId, file, onUploadProgress);
 export const gradeSubmission = (id, payload) =>
   client.patch(`/submissions/${id}/grade`, payload);
 export const downloadSubmission = (id, onDownloadProgress) =>

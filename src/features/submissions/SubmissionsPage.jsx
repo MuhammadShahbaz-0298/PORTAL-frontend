@@ -13,7 +13,7 @@ import { Download, Upload } from "lucide-react";
 import { useSelector } from "react-redux";
 import {
   listSubmissions,
-  uploadSubmission,
+  saveSubmissionFile,
   downloadSubmission,
 } from "../../api/submissions";
 import { listAssignments } from "../../api/assignments";
@@ -22,6 +22,8 @@ import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
 import ToastNotification from "../../components/ui/ToastNotification";
 import SearchableSelect from "../../components/ui/SearchableSelect";
+import ProgressBar from "../../components/ui/ProgressBar";
+import { getProgressPercentage } from "../../lib/transferProgress";
 export default function SubmissionsPage() {
   const user = useSelector(state => state.auth.user);
   const resource = useApiResource(listSubmissions);
@@ -36,6 +38,17 @@ export default function SubmissionsPage() {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(null);
+  const selectedSubmission = (resource.data || []).find(
+    submission =>
+      String(submission.assignment?._id || submission.assignment) ===
+      assignmentId
+  );
+  let submitLabel = selectedSubmission
+    ? "Edit submission"
+    : "Upload submission";
+  if (uploading) {
+    submitLabel = selectedSubmission ? "Updating..." : "Uploading...";
+  }
   const submit = async event => {
     event.preventDefault();
     setError("");
@@ -45,19 +58,24 @@ export default function SubmissionsPage() {
     setUploading(true);
     setUploadProgress(0);
     try {
-      await uploadSubmission(assignmentId, file, progressEvent => {
-        setUploadProgress(
-          progressEvent.total
-            ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
-            : null
-        );
+      await saveSubmissionFile({
+        assignmentId,
+        submissionId: selectedSubmission?._id,
+        file,
+        onUploadProgress: event =>
+          setUploadProgress(getProgressPercentage(event)),
       });
-      setNotice("Submission uploaded successfully.");
+      setNotice(
+        selectedSubmission
+          ? "Submission updated successfully."
+          : "Submission uploaded successfully."
+      );
       setFile(null);
       await resource.reload();
     } catch (requestError) {
       setError(
-        requestError.response?.data?.error || "Unable to upload submission."
+        requestError.response?.data?.error ||
+          `Unable to ${selectedSubmission ? "update" : "upload"} submission.`
       );
     } finally {
       setUploading(false);
@@ -70,11 +88,7 @@ export default function SubmissionsPage() {
     setDownloadProgress(0);
     try {
       const response = await downloadSubmission(id, progressEvent => {
-        setDownloadProgress(
-          progressEvent.total
-            ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
-            : null
-        );
+        setDownloadProgress(getProgressPercentage(progressEvent));
       });
       const url = URL.createObjectURL(response.data);
       const anchor = document.createElement("a");
@@ -115,7 +129,6 @@ export default function SubmissionsPage() {
             columns={[
               "Learner",
               "Assignment",
-              "Attempt",
               "Status",
               "Grade",
               "Feedback",
@@ -131,7 +144,6 @@ export default function SubmissionsPage() {
                 <td>
                   {item.assignment?.title || item.assignment || "Assignment"}
                 </td>
-                <td>#{item.attempt || 1}</td>
                 <td>
                   <StatusBadge
                     tone={item.status === "graded" ? "olive" : "coral"}
@@ -154,18 +166,11 @@ export default function SubmissionsPage() {
                     </Button>
                   )}
                   {downloadingId === item._id && (
-                    <div>
-                      <progress
-                        max="100"
-                        value={downloadProgress ?? undefined}
-                        aria-label="Download progress"
-                      />
-                      <small>
-                        {downloadProgress == null
-                          ? "Downloading..."
-                          : `${downloadProgress}%`}
-                      </small>
-                    </div>
+                    <ProgressBar
+                      value={downloadProgress}
+                      label="Downloading..."
+                      valueLabel=""
+                    />
                   )}
                 </td>
               </tr>
@@ -177,7 +182,11 @@ export default function SubmissionsPage() {
         <Card className="form-card">
           <CardBody>
             <div className="eyebrow">Submit work</div>
-            <h2>Upload a ZIP archive</h2>
+            <h2>
+              {selectedSubmission
+                ? "Edit your submission"
+                : "Upload a ZIP archive"}
+            </h2>
             <Form onSubmit={submit}>
               <SearchableSelect
                 label="Assignment"
@@ -190,11 +199,14 @@ export default function SubmissionsPage() {
                 onChange={setAssignmentId}
               />
               <FormGroup>
-                <Label>ZIP file</Label>
+                <Label>
+                  {selectedSubmission ? "Replacement ZIP file" : "ZIP file"}
+                </Label>
                 <Input
                   required
                   type="file"
                   accept=".zip,application/zip"
+                  disabled={uploading}
                   onChange={event => setFile(event.target.files?.[0])}
                 />
               </FormGroup>
@@ -204,23 +216,15 @@ export default function SubmissionsPage() {
                 disabled={uploading}
               >
                 <Upload size={15} />{" "}
-                {uploading ? "Uploading..." : "Upload submission"}
+                {submitLabel}
               </Button>
               {uploading && (
-                <div>
-                  <progress
-                    max="100"
-                    value={uploadProgress ?? undefined}
-                    aria-label="Upload progress"
-                  />
-                  <small>
-                    {uploadProgress == null
-                      ? "Uploading..."
-                      : uploadProgress === 100
-                        ? "Processing submission..."
-                        : `${uploadProgress}% uploaded`}
-                  </small>
-                </div>
+                <ProgressBar
+                  value={uploadProgress}
+                  label="Uploading..."
+                  valueLabel=""
+                  completedLabel="Processing submission..."
+                />
               )}
             </Form>
           </CardBody>

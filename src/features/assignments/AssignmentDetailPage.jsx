@@ -15,8 +15,7 @@ import { Edit3, Upload } from "lucide-react";
 import { getAssignment } from "../../api/assignments";
 import {
   listSubmissions,
-  uploadSubmission,
-  updateSubmissionFile,
+  saveSubmissionFile,
 } from "../../api/submissions";
 import { apiError } from "../../api/client";
 import {
@@ -78,9 +77,11 @@ export default function AssignmentDetailPage() {
     setNotice("");
     setSaving(true);
     try {
-      const response = existing
-        ? await updateSubmissionFile(existing._id, file)
-        : await uploadSubmission(assignmentId, file);
+      const response = await saveSubmissionFile({
+        assignmentId,
+        submissionId: existing?._id,
+        file,
+      });
       setExisting(response.data);
       setFile(null);
       setNotice(
