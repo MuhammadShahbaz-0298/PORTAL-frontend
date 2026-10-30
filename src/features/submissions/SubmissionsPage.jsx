@@ -142,15 +142,17 @@ export default function SubmissionsPage() {
                 <td>{item.grade ?? "—"}</td>
                 <td className="feedback-cell">{item.feedback || "—"}</td>
                 <td>
-                  <Button
-                    color="link"
-                    className="icon-button"
-                    onClick={() => download(item._id, item.fileName)}
-                    disabled={downloadingId !== null}
-                    aria-label="Download submission"
-                  >
-                    <Download size={16} />
-                  </Button>
+                  {downloadingId !== item._id && (
+                    <Button
+                      color="link"
+                      className="icon-button"
+                      onClick={() => download(item._id, item.fileName)}
+                      disabled={downloadingId !== null}
+                      aria-label="Download submission"
+                    >
+                      <Download size={16} />
+                    </Button>
+                  )}
                   {downloadingId === item._id && (
                     <div>
                       <progress
