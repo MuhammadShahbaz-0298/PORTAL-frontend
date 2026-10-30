@@ -7,9 +7,10 @@ const submissionForm = (assignmentId, file) => {
   data.append("file", file);
   return data;
 };
-export const uploadSubmission = (assignmentId, file) =>
+export const uploadSubmission = (assignmentId, file, onUploadProgress) =>
   client.post("/submissions", submissionForm(assignmentId, file), {
     headers: { "Content-Type": "multipart/form-data" },
+    onUploadProgress,
   });
 export const updateSubmissionFile = (submissionId, file) =>
   client.patch(`/submissions/${submissionId}/file`, submissionForm("", file), {
@@ -17,5 +18,8 @@ export const updateSubmissionFile = (submissionId, file) =>
   });
 export const gradeSubmission = (id, payload) =>
   client.patch(`/submissions/${id}/grade`, payload);
-export const downloadSubmission = id =>
-  client.get(`/submissions/${id}/download`, { responseType: "blob" });
+export const downloadSubmission = (id, onDownloadProgress) =>
+  client.get(`/submissions/${id}/download`, {
+    responseType: "blob",
+    onDownloadProgress,
+  });

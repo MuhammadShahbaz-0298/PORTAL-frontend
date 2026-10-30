@@ -32,14 +32,26 @@ export default function SubmissionsPage() {
   const [file, setFile] = useState(null);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [downloadProgress, setDownloadProgress] = useState(null);
   const submit = async event => {
     event.preventDefault();
     setError("");
     setNotice("");
     if (!assignmentId || !file)
       return setError("Choose an assignment and ZIP file.");
+    setUploading(true);
+    setUploadProgress(0);
     try {
-      await uploadSubmission(assignmentId, file);
+      await uploadSubmission(assignmentId, file, progressEvent => {
+        setUploadProgress(
+          progressEvent.total
+            ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            : null
+        );
+      });
       setNotice("Submission uploaded successfully.");
       setFile(null);
       await resource.reload();
@@ -47,16 +59,35 @@ export default function SubmissionsPage() {
       setError(
         requestError.response?.data?.error || "Unable to upload submission."
       );
+    } finally {
+      setUploading(false);
+      setUploadProgress(null);
     }
   };
   const download = async (id, name) => {
-    const response = await downloadSubmission(id);
-    const url = URL.createObjectURL(response.data);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = name || "submission.zip";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    setError("");
+    setDownloadingId(id);
+    setDownloadProgress(0);
+    try {
+      const response = await downloadSubmission(id, progressEvent => {
+        setDownloadProgress(
+          progressEvent.total
+            ? Math.round((progressEvent.loaded / progressEvent.total) * 100)
+            : null
+        );
+      });
+      const url = URL.createObjectURL(response.data);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = name || "submission.zip";
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setError("Unable to download submission.");
+    } finally {
+      setDownloadingId(null);
+      setDownloadProgress(null);
+    }
   };
   const student = user?.role === "student";
   return (
@@ -115,10 +146,25 @@ export default function SubmissionsPage() {
                     color="link"
                     className="icon-button"
                     onClick={() => download(item._id, item.fileName)}
+                    disabled={downloadingId !== null}
                     aria-label="Download submission"
                   >
                     <Download size={16} />
                   </Button>
+                  {downloadingId === item._id && (
+                    <div>
+                      <progress
+                        max="100"
+                        value={downloadProgress ?? undefined}
+                        aria-label="Download progress"
+                      />
+                      <small>
+                        {downloadProgress == null
+                          ? "Downloading..."
+                          : `${downloadProgress}%`}
+                      </small>
+                    </div>
+                  )}
                 </td>
               </tr>
             )}
@@ -150,9 +196,30 @@ export default function SubmissionsPage() {
                   onChange={event => setFile(event.target.files?.[0])}
                 />
               </FormGroup>
-              <Button type="submit" className="btn-coral">
-                <Upload size={15} /> Upload submission
+              <Button
+                type="submit"
+                className="btn-coral"
+                disabled={uploading}
+              >
+                <Upload size={15} />{" "}
+                {uploading ? "Uploading..." : "Upload submission"}
               </Button>
+              {uploading && (
+                <div>
+                  <progress
+                    max="100"
+                    value={uploadProgress ?? undefined}
+                    aria-label="Upload progress"
+                  />
+                  <small>
+                    {uploadProgress == null
+                      ? "Uploading..."
+                      : uploadProgress === 100
+                        ? "Processing submission..."
+                        : `${uploadProgress}% uploaded`}
+                  </small>
+                </div>
+              )}
             </Form>
           </CardBody>
         </Card>
