@@ -69,6 +69,12 @@ export default function AppLayout() {
   }, [dispatch, navigate, user]);
 
   useEffect(() => {
+    if (!loading && !user) {
+      navigate({ to: "/login", replace: true });
+    }
+  }, [loading, user, navigate]);
+
+  useEffect(() => {
     const refresh = () => dispatch(refreshSession());
     window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
@@ -78,7 +84,7 @@ export default function AppLayout() {
     };
   }, [dispatch]);
 
-  if (loading)
+  if (loading || !user)
     return <LoadingState text="Restoring your workspace…" />;
   if (!allowed)
     return (
