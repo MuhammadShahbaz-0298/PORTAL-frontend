@@ -66,7 +66,6 @@ export default function UsersPage() {
     name: "",
     email: "",
     role: "student",
-    batchId: "",
   });
   const rows = useMemo(
     () =>
@@ -83,10 +82,19 @@ export default function UsersPage() {
     setError("");
     const password = generatePassword();
     try {
-      await register({ ...form, password });
+      // Build payload without empty optional fields
+      const payload = {
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        password,
+      };
+      if (form.batchId) payload.batchId = form.batchId;
+
+      await register(payload);
       setCredentials({ email: form.email, password });
       setOpen(false);
-      setForm({ name: "", email: "", role: "student", batchId: "" });
+      setForm({ name: "", email: "", role: "student" });
       setNotice("User account created successfully.");
       await resource.reload();
     } catch (requestError) {
@@ -129,7 +137,7 @@ export default function UsersPage() {
       } catch (requestError) {
         setError(
           requestError.response?.data?.error ||
-            `Unable to ${shouldActivate ? "activate" : "deactivate"} account.`
+          `Unable to ${shouldActivate ? "activate" : "deactivate"} account.`
         );
       } finally {
         setActioning(null);
