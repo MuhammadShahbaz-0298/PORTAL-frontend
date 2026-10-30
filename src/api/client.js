@@ -40,7 +40,7 @@ client.interceptors.response.use(
       error.response?.data?.error || error.response?.data?.message;
     const originalRequest = error.config;
 
-    if (status === 403 && message === MUST_CHANGE_PASSWORD_MESSAGE) {
+    if (status === 403 && message === MUST_CHANGE_PASSWORD_MESSAGE && window.location.pathname !== "/force-change-password" ) {
       window.location.replace("/force-change-password");
       return Promise.reject(error);
     }
