@@ -7,6 +7,7 @@ export default function useApiResource(fetcher, options = {}) {
   const fetcherRef = useRef(fetcher);
   const paramsRef = useRef(params);
   const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState("");
 
@@ -26,6 +27,7 @@ export default function useApiResource(fetcher, options = {}) {
 
       const result = toCollection(response.data);
       setData(result);
+      setTotal(Number(response.headers?.["x-total-count"] || result.length));
       return result;
     } catch (requestError) {
       setError(apiError(requestError));
@@ -39,5 +41,5 @@ export default function useApiResource(fetcher, options = {}) {
     load().catch(() => undefined);
   }, [load]);
 
-  return { data, setData, loading, error, reload: load };
+  return { data, setData, total, loading, error, reload: load };
 }

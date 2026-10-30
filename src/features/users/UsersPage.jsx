@@ -12,12 +12,14 @@ import {
   ModalBody,
   ModalHeader,
 } from "reactstrap";
-import { Check, Copy, MoreHorizontal, Plus, Search } from "lucide-react";
+import { Check, Copy, KeyRound, MoreHorizontal, Plus, Search } from "lucide-react";
+import { useSelector } from "react-redux";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import { register } from "../../api/auth";
-import { listUsers, updateUser, deleteUser } from "../../api/users";
+import { listUsers, updateUser, deleteUser, resetPassword } from "../../api/users";
 import { listRoles } from "../../api/roles";
+import { hasPermission } from "../../lib/permissions";
 import useApiResource from "../../hooks/useApiResource";
 import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
 import DataTable from "../../components/ui/DataTable";
@@ -40,6 +42,10 @@ const fetchRoles = () =>
 export default function UsersPage() {
   const resource = useApiResource(listUsers);
   const roles = useApiResource(fetchRoles);
+  const currentUser = useSelector(state => state.auth.user);
+  const canManageUsers =
+    currentUser?.role === "admin" ||
+    hasPermission(currentUser, "users.manage");
   const roleOptions = useMemo(
     () => [
       ...new Map(
@@ -133,11 +139,11 @@ export default function UsersPage() {
 
     if (result.isDenied) {
       const confirmation = await Swal.fire({
-        title: "Delete user?",
-        text: `${account.name || "This user"} will be permanently removed from the system.`,
+        title: "Deactivate and archive user?",
+        text: `${account.name || "This user"} will be deactivated and archived. Their history is kept.`,
         icon: "error",
         showCancelButton: true,
-        confirmButtonText: "Delete user",
+        confirmButtonText: "Deactivate user",
         cancelButtonText: "Cancel",
         confirmButtonColor: "#b8563d",
         cancelButtonColor: "#173044",
@@ -155,13 +161,51 @@ export default function UsersPage() {
       setError("");
       try {
         await deleteUser(account._id);
-        setNotice(`${account.name || "User"} deleted permanently.`);
+        setNotice(`${account.name || "User"} archived successfully.`);
         await resource.reload();
       } catch (requestError) {
         setError(requestError.response?.data?.error || "Unable to delete user.");
       } finally {
         setActioning(null);
       }
+    }
+  };
+
+  const handleResetPassword = async account => {
+    const confirmation = await Swal.fire({
+      title: "Reset password?",
+      text: `Reset password for ${account.name || account.email}? They will be forced to change it on next login. This cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Reset password",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#b8563d",
+      cancelButtonColor: "#173044",
+      reverseButtons: true,
+      customClass: {
+        popup: "swal-linen",
+        confirmButton: "swal-confirm",
+        cancelButton: "swal-cancel",
+      },
+    });
+
+    if (!confirmation.isConfirmed) return;
+
+    setActioning(account._id);
+    setError("");
+    try {
+      const { data } = await resetPassword(account._id);
+      setCredentials({
+        email: account.email,
+        password: data.temporaryPassword,
+      });
+      setNotice("Temporary password generated successfully.");
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.error || "Unable to reset password."
+      );
+    } finally {
+      setActioning(null);
     }
   };
 
@@ -232,11 +276,23 @@ export default function UsersPage() {
                     >
                       <MoreHorizontal size={15} /> Actions
                     </Button>
+                    {canManageUsers && (
+                      <Button
+                        color="light"
+                        className="table-action"
+                        disabled={actioning === item._id}
+                        onClick={() => handleResetPassword(item)}
+                        aria-label={`Reset password for ${item.name}`}
+                      >
+                        <KeyRound size={15} /> Reset password
+                      </Button>
+                    )}
                   </div>
                 </td>
               </tr>
             )}
           />
+          <p className="muted mt-3">Showing {resource.total} accounts</p>
         </CardBody>
       </Card>
       <Modal isOpen={open} toggle={() => setOpen(false)} fade={false} centered>
@@ -323,6 +379,9 @@ export default function UsersPage() {
               <Copy size={15} /> Copy
             </Button>
           </div>
+          <p className="form-note">
+            This password will not be shown again. Share it with the user now.
+          </p>
         </ModalBody>
       </Modal>
     </>

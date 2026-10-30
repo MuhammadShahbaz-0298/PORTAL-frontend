@@ -94,11 +94,11 @@ export default function BatchesPage() {
 
   const deleteSelectedBatch = async batch => {
     const confirmation = await Swal.fire({
-      title: "Delete batch?",
-      text: `This will remove ${batch.name} and its enrollments. This action cannot be undone.`,
+      title: "Archive batch?",
+      text: `${batch.name} will be archived. Existing enrollments and history are kept.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Delete batch",
+      confirmButtonText: "Archive batch",
       cancelButtonText: "Keep it",
       confirmButtonColor: "#b8563d",
       cancelButtonColor: "#173044",
@@ -114,7 +114,7 @@ export default function BatchesPage() {
     setError("");
     try {
       await deleteBatch(batch._id);
-      setNotice("Batch removed successfully.");
+      setNotice("Batch archived successfully.");
       await batches.reload();
     } catch (requestError) {
       setError(apiError(requestError));

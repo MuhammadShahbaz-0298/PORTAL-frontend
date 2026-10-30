@@ -1,5 +1,5 @@
 /* Topbar component: owns route context and responsive menu affordance. */
-import { Menu, MoreHorizontal } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useLocation } from "@tanstack/react-router";
 export default function Topbar({ onOpenMenu }) {
   const location = useLocation();

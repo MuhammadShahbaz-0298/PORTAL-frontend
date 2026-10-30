@@ -31,7 +31,7 @@ export default function AppLayout() {
     !route || hasPermission(user, route.permission, route.roles || []);
 
   useEffect(() => {
-    if (!localStorage.getItem("school_portal_token") || !user) return;
+    if (!user) return;
     const resetTimer = () => {
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
       touchSession();
@@ -78,7 +78,7 @@ export default function AppLayout() {
     };
   }, [dispatch]);
 
-  if (loading || (!user && localStorage.getItem("school_portal_token")))
+  if (loading)
     return <LoadingState text="Restoring your workspace…" />;
   if (!allowed)
     return (

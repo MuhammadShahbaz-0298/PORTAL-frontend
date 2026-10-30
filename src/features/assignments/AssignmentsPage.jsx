@@ -111,11 +111,11 @@ export default function AssignmentsPage() {
 
   const closeAssignment = async id => {
     const confirmation = await Swal.fire({
-      title: "Close assignment?",
-      text: "Students will no longer be able to upload or edit submissions after this assignment is closed.",
+      title: "Archive assignment?",
+      text: "This assignment will be archived. Students will no longer be able to upload or edit submissions, and existing work and history are kept.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Close assignment",
+      confirmButtonText: "Archive assignment",
       cancelButtonText: "Keep open",
       confirmButtonColor: "#e46b4b",
       cancelButtonColor: "#173044",
@@ -132,7 +132,7 @@ export default function AssignmentsPage() {
     setSubmitError("");
     try {
       await archiveAssignment(id);
-      setNotice("Assignment closed. New submissions are no longer accepted.");
+      setNotice("Assignment archived. New submissions are no longer accepted.");
       await resource.load();
     } catch (error) {
       setSubmitError(apiError(error));

@@ -10,6 +10,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import AppLayout from "../components/layout/AppLayout";
 import LoginPage from "../features/auth/LoginPage";
+import ForceChangePasswordPage from "../features/auth/ForceChangePasswordPage";
 import DashboardPage from "../features/dashboard/DashboardPage";
 import AssignmentsPage from "../features/assignments/AssignmentsPage";
 import AssignmentDetailPage from "../features/assignments/AssignmentDetailPage";
@@ -34,11 +35,16 @@ const loginRoute = createRoute({
   path: "/login",
   component: LoginPage,
 });
+const forceChangePasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/force-change-password",
+  component: ForceChangePasswordPage,
+});
 const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
   beforeLoad: ({ context }) => {
-    if (!context.auth.user && !localStorage.getItem("school_portal_token"))
+    if (!context.auth.loading && !context.auth.user)
       throw redirect({ to: "/login" });
   },
   component: AppLayout,
@@ -47,6 +53,7 @@ const child = (path, component) =>
   createRoute({ getParentRoute: () => protectedRoute, path, component });
 const routeTree = rootRoute.addChildren([
   loginRoute,
+  forceChangePasswordRoute,
   protectedRoute.addChildren([
     child("/", DashboardPage),
     child("/dashboard", DashboardPage),

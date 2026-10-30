@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "@tanstack/react-router";
 import Swal from "sweetalert2";
 import { login } from "../../store/actions/authActions";
-import { env } from "../../config/env";
 import ToastNotification from "../../components/ui/ToastNotification";
 export default function LoginPage() {
   const dispatch = useDispatch();

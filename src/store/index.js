@@ -11,11 +11,9 @@ import {
   rolesReducer,
 } from "./reducers/resources";
 
-const savedUser = JSON.parse(localStorage.getItem("school_portal_user") || "null");
 const authInitial = {
-  user: savedUser,
-  token: localStorage.getItem("school_portal_token"),
-  loading: Boolean(localStorage.getItem("school_portal_token")),
+  user: null,
+  loading: true,
   error: null,
 };
 export const authReducer = (state = authInitial, action) => {
@@ -27,13 +25,12 @@ export const authReducer = (state = authInitial, action) => {
         ...state,
         loading: false,
         user: action.payload.user,
-        token: action.payload.token,
         error: null,
       };
     case types.AUTH_FAILURE:
       return { ...state, loading: false, error: action.payload };
     case types.AUTH_LOGOUT:
-      return { ...state, loading: false, user: null, token: null, error: null };
+      return { ...state, loading: false, user: null, error: null };
     default:
       return state;
   }

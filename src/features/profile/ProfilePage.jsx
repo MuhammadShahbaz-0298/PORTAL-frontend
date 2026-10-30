@@ -1,7 +1,6 @@
 /* Profile feature: account identity, security settings, and session-safe feedback. */
 import { useState } from "react";
 import {
-  Alert,
   Button,
   Card,
   CardBody,
