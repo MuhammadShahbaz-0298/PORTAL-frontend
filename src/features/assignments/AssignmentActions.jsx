@@ -42,10 +42,11 @@ export default function AssignmentActions({ assignment, layout = "table" }) {
 
   if (layout === "card") {
     return (
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {canEdit ? (
           <Button
             variant="secondary"
+            className="min-w-0 flex-1"
             onClick={() => dispatch.assignments.openForm(assignment)}
             disabled={locked}
           >
@@ -54,7 +55,12 @@ export default function AssignmentActions({ assignment, layout = "table" }) {
           </Button>
         ) : null}
         {canDelete ? (
-          <Button variant="danger" onClick={askArchive} disabled={locked}>
+          <Button
+            variant="danger"
+            className="min-w-0 flex-1"
+            onClick={askArchive}
+            disabled={locked}
+          >
             <Archive size={15} aria-hidden="true" />
             Archive
           </Button>

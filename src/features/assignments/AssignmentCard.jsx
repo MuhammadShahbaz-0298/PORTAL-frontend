@@ -17,7 +17,6 @@ const formatDate = value => {
   if (Number.isNaN(date.getTime())) return "No deadline";
   return new Intl.DateTimeFormat("en-US", {
     dateStyle: "medium",
-    timeStyle: "short",
   }).format(date);
 };
 
@@ -27,11 +26,11 @@ export default function AssignmentCard({ assignment }) {
   const batchName = assignment.batch?.name || assignment.batch || "Unassigned";
 
   return (
-    <div className="grid gap-3">
+    <div className="grid min-w-0 gap-3">
       <Link
         to="/assignments/$assignmentId"
         params={{ assignmentId: id }}
-        className="-m-2 flex items-start gap-3 rounded-control p-2 transition hover:bg-canvas"
+        className="flex min-w-0 items-start gap-3 rounded-control p-1 transition hover:bg-canvas"
         aria-label={`View ${assignment.title || "assignment"} brief`}
       >
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-brand-soft text-brand">
@@ -41,12 +40,21 @@ export default function AssignmentCard({ assignment }) {
           <span className="block truncate text-sm font-semibold text-ink">
             {assignment.title || "Untitled assignment"}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-muted">
-            {batchName} · due {formatDate(assignment.dueDate)}
+          <span className="mt-1 flex min-w-0 flex-wrap gap-x-1 text-xs text-muted">
+            <span className="max-w-full truncate">{batchName}</span>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">
+              Due {formatDate(assignment.dueDate)}
+            </span>
           </span>
         </span>
-        <span className="flex shrink-0 items-center gap-2">
-          <Badge tone={STATUS_TONES[status] || "neutral"}>{status}</Badge>
+        <span className="flex shrink-0 items-center gap-1">
+          <Badge
+            tone={STATUS_TONES[status] || "neutral"}
+            className="px-2 sm:px-2.5"
+          >
+            {status}
+          </Badge>
           <ChevronRight size={16} aria-hidden="true" className="text-muted" />
         </span>
       </Link>

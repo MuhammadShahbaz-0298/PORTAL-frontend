@@ -24,23 +24,28 @@ export default function BottomNav({ open, onOpenMore }) {
         BOTTOM_NAV_SAFE_CLASS
       )}
     >
-      <ul className={classNames("grid grid-cols-5", BOTTOM_NAV_HEIGHT_CLASS)}>
+      <ul
+        className={classNames(
+          "grid grid-cols-[repeat(5,minmax(0,1fr))]",
+          BOTTOM_NAV_HEIGHT_CLASS
+        )}
+      >
         {items.map(item => {
           const Icon = NAV_ICONS[item.icon] || NAV_ICONS.dashboard;
           const active = isActivePath(location.pathname, item.path);
 
           return (
-            <li key={item.path}>
+            <li key={item.path} className="min-w-0">
               <Link
                 to={item.path}
                 aria-current={active ? "page" : undefined}
                 className={classNames(
-                  "flex h-full flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold transition",
+                  "flex h-full min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] leading-none font-semibold transition",
                   active ? "text-brand" : "text-muted hover:text-ink"
                 )}
               >
                 <Icon size={20} aria-hidden="true" />
-                <span className="truncate">{item.label}</span>
+                <span className="block max-w-full truncate">{item.label}</span>
               </Link>
             </li>
           );
@@ -53,12 +58,12 @@ export default function BottomNav({ open, onOpenMore }) {
             aria-haspopup="dialog"
             aria-expanded={open}
             className={classNames(
-              "flex h-full w-full flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold transition",
+              "flex h-full w-full min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] leading-none font-semibold transition",
               moreActive ? "text-brand" : "text-muted hover:text-ink"
             )}
           >
             <MoreHorizontal size={20} aria-hidden="true" />
-            <span>More</span>
+            <span className="block max-w-full truncate">More</span>
           </button>
         </li>
       </ul>
