@@ -8,7 +8,5 @@ export const env = {
     ? normalizedApiUrl
     : `${normalizedApiUrl}/api`,
   appTitle: import.meta.env.VITE_APP_TITLE || "School Portal",
-  appLogo:
-    import.meta.env.VITE_APP_LOGO ||
-    "/manus-storage/portal-mark.png",
+  appLogo: import.meta.env.VITE_APP_LOGO || "/manus-storage/portal-mark.png",
 };

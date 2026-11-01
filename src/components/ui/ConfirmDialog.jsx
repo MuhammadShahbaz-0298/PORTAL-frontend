@@ -1,25 +1,35 @@
-/* ConfirmDialog: explicit confirmation for deactivate/delete actions. */
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from "reactstrap";
-export default function ConfirmDialog({
-  isOpen,
-  toggle,
-  title = "Confirm action",
-  message,
-  onConfirm,
-  busy = false,
+/* ConfirmDialog: the shared SweetAlert2 confirmation for destructive actions. */
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
+
+export async function confirmDialog({
+  title,
+  text,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
 }) {
-  return (
-    <Modal isOpen={isOpen} toggle={toggle}>
-      <ModalHeader toggle={toggle}>{title}</ModalHeader>
-      <ModalBody>{message}</ModalBody>
-      <ModalFooter>
-        <Button color="light" onClick={toggle}>
-          Cancel
-        </Button>
-        <Button color="danger" disabled={busy} onClick={onConfirm}>
-          {busy ? "Working…" : "Confirm"}
-        </Button>
-      </ModalFooter>
-    </Modal>
-  );
+  const result = await Swal.fire({
+    title,
+    text,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: confirmText,
+    cancelButtonText: cancelText,
+    reverseButtons: true,
+    focusCancel: true,
+    buttonsStyling: false,
+    customClass: {
+      popup: "rounded-card font-sans",
+      title: "text-lg font-semibold text-ink",
+      htmlContainer: "text-sm text-muted",
+      confirmButton:
+        "min-h-11 rounded-control bg-danger px-4 text-sm font-semibold text-white",
+      cancelButton:
+        "min-h-11 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink",
+    },
+  });
+
+  return result.isConfirmed;
 }
+
+export default confirmDialog;

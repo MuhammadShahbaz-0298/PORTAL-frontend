@@ -1,253 +1,220 @@
-/* Grading page: records stay visible in a table; grade changes require an explicit row action. */
-import { useMemo, useState } from "react";
+/* Grading page: filter the queue, then grade one submission at a time. */
+import { useEffect, useMemo } from "react";
+import { connect } from "react-redux";
+import { Pencil, SlidersHorizontal } from "lucide-react";
+import Badge from "../../components/ui/Badge";
+import DataList from "../../components/ui/DataList";
+import PageHeader from "../../components/ui/PageHeader";
+import SearchInput from "../../components/ui/SearchInput";
+import Toast from "../../components/ui/Toast";
+import { classNames } from "../../lib/classNames";
+import GradingCard from "./GradingCard";
+import GradingModal from "./GradingModal";
 import {
-  Button,
-  Card,
-  CardBody,
-  Form,
-  FormGroup,
-  Input,
-  Label,
-  Modal,
-  ModalBody,
-  ModalHeader,
-} from "reactstrap";
-import { Edit3, SlidersHorizontal } from "lucide-react";
-import { gradeSubmission, listSubmissions } from "../../api/submissions";
-import useApiResource from "../../hooks/useApiResource";
-import { apiError } from "../../api/client";
-import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
-import DataTable from "../../components/ui/DataTable";
-import ToastNotification from "../../components/ui/ToastNotification";
+  assignmentName,
+  formatDate,
+  personEmail,
+  personName,
+} from "./gradingUtils";
 
-const displayName = (value, fallback) =>
-  value?.name || value?.title || value || fallback;
+const FILTERS = [
+  { value: "all", label: "All records" },
+  { value: "needs-review", label: "Needs review" },
+  { value: "graded", label: "Graded" },
+];
 
-export default function GradingPage() {
-  const resource = useApiResource(listSubmissions);
-  const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ grade: "", feedback: "" });
-  const [open, setOpen] = useState(false);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+function GradingPage({
+  grading,
+  load,
+  setFilter,
+  setQuery,
+  openEditor,
+  clearMessages,
+}) {
+  // One mount effect: the grading queue.
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const rows = useMemo(
-    () =>
-      resource.data.filter(item => {
-        if (filter === "graded") return item.status === "graded";
-        if (filter === "needs-review") return item.status !== "graded";
-        return true;
-      }),
-    [resource.data, filter]
-  );
+  const rows = useMemo(() => {
+    const needle = grading.query.trim().toLowerCase();
 
-  const openEditor = submission => {
-    setSelected(submission);
-    setForm({
-      grade: submission.grade ?? "",
-      feedback: submission.feedback ?? "",
+    return grading.items.filter(item => {
+      if (grading.filter === "graded" && item.status !== "graded") return false;
+      if (grading.filter === "needs-review" && item.status === "graded")
+        return false;
+      if (!needle) return true;
+
+      return [
+        personName(item.student),
+        assignmentName(item.assignment),
+        item.feedback,
+      ]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(needle));
     });
-    setError("");
-    setOpen(true);
-  };
+  }, [grading.items, grading.filter, grading.query]);
 
-  const closeEditor = () => {
-    setOpen(false);
-    setSelected(null);
-    setError("");
-  };
+  const message = grading.pageError || grading.notice;
 
-  const save = async event => {
-    event.preventDefault();
-    if (!selected) return;
-    if (form.grade === "") {
-      setError("Enter marks before saving the grade.");
-      return;
-    }
-    setError("");
-    setNotice("");
-    try {
-      await gradeSubmission(selected._id, {
-        grade: form.grade,
-        feedback: form.feedback,
-        status: "graded",
-      });
-      closeEditor();
-      setNotice(
-        selected.status === "graded"
-          ? "Grade and feedback updated."
-          : "Submission graded successfully."
-      );
-      await resource.reload();
-    } catch (requestError) {
-      setError(apiError(requestError));
-    }
-  };
+  const columns = [
+    {
+      key: "learner",
+      label: "Learner",
+      render: submission => (
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">
+            {personName(submission.student)}
+          </p>
+          <p className="text-xs text-muted">
+            {personEmail(submission.student) || "Student record"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "assignment",
+      label: "Assignment",
+      render: submission => assignmentName(submission.assignment),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: submission => (
+        <Badge tone={submission.status === "graded" ? "success" : "warning"}>
+          {submission.status || "submitted"}
+        </Badge>
+      ),
+    },
+    {
+      key: "marks",
+      label: "Marks",
+      render: submission => submission.grade ?? "—",
+    },
+    {
+      key: "feedback",
+      label: "Feedback",
+      className: "max-w-[16rem]",
+      render: submission => (
+        <span className="line-clamp-2 text-muted">
+          {submission.feedback || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "submitted",
+      label: "Submitted",
+      render: submission => formatDate(submission.submittedAt),
+    },
+    {
+      key: "action",
+      label: "Action",
+      className: "text-right",
+      render: submission => (
+        <button
+          type="button"
+          onClick={() => openEditor(submission)}
+          className="inline-flex min-h-9 items-center gap-1 rounded-control px-2 text-xs font-semibold text-brand transition hover:bg-brand-soft"
+          aria-label={`${submission.status === "graded" ? "Edit" : "Grade"} ${personName(submission.student)}`}
+        >
+          <Pencil size={14} aria-hidden="true" />
+          {submission.status === "graded" ? "Edit" : "Grade"}
+        </button>
+      ),
+    },
+  ];
 
   return (
-    <>
+    <div className="font-sans">
       <PageHeader
         eyebrow="Assessment desk"
         title="Grading"
-        description="Review every submission in one table and edit marks only when needed."
+        description="Review every submission in one queue and edit marks only when needed."
       />
-      <ToastNotification
-        message={resource.error || notice}
-        variant={resource.error ? "error" : "success"}
-        onClose={() => {
-          if (resource.error) resource.reload();
-          setNotice("");
-        }}
+
+      <Toast
+        message={message}
+        tone={grading.pageError ? "error" : "success"}
+        onClose={clearMessages}
       />
-      <Card className="table-card">
-        <CardBody>
-          <div className="table-toolbar">
-            <div>
-              <div className="eyebrow">Submission records</div>
-              <p className="muted">
-                {rows.length} record{rows.length === 1 ? "" : "s"} shown
-              </p>
-            </div>
-            <div className="record-filters" aria-label="Filter grading records">
-              <SlidersHorizontal size={15} />
-              {["all", "needs-review", "graded"].map(value => (
-                <Button
-                  key={value}
-                  color={filter === value ? "dark" : "light"}
-                  className={filter === value ? "active-filter" : ""}
-                  onClick={() => setFilter(value)}
-                >
-                  {value === "all"
-                    ? "All records"
-                    : value === "needs-review"
-                      ? "Needs review"
-                      : "Graded"}
-                </Button>
-              ))}
-            </div>
-          </div>
-          <DataTable
-            columns={[
-              "Learner",
-              "Assignment",
-              "Status",
-              "Marks",
-              "Feedback",
-              "Submitted",
-              "Action",
-            ]}
-            rows={rows}
-            loading={resource.loading}
-            error={resource.error}
-            onRetry={resource.reload}
-            empty={{
-              title:
-                filter === "graded"
-                  ? "No graded records"
-                  : filter === "needs-review"
-                    ? "No submissions need review"
-                    : "No submissions yet",
-              text: "Submission records will appear here when learners upload their work.",
-            }}
-            renderRow={item => (
-              <tr key={item._id}>
-                <td>
-                  <strong>{displayName(item.student, "Learner")}</strong>
-                  <span className="row-sub">
-                    {item.student?.email || "Student record"}
-                  </span>
-                </td>
-                <td>{displayName(item.assignment, "Assignment")}</td>
-                <td>
-                  <StatusBadge
-                    tone={item.status === "graded" ? "olive" : "coral"}
-                  >
-                    {item.status || "submitted"}
-                  </StatusBadge>
-                </td>
-                <td>{item.grade ?? "—"}</td>
-                <td className="feedback-cell">{item.feedback || "—"}</td>
-                <td>
-                  {item.submittedAt
-                    ? new Date(item.submittedAt).toLocaleDateString()
-                    : "—"}
-                </td>
-                <td>
-                  <Button
-                    color="light"
-                    className="table-action"
-                    onClick={() => openEditor(item)}
-                  >
-                    <Edit3 size={14} />{" "}
-                    {item.status === "graded" ? "Edit" : "Grade"}
-                  </Button>
-                </td>
-              </tr>
-            )}
+
+      <div className="mb-4 grid gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <SearchInput
+            value={grading.query}
+            onChange={setQuery}
+            placeholder="Search learner, assignment, or feedback"
+            className="sm:max-w-sm"
           />
-        </CardBody>
-      </Card>
-      <Modal isOpen={open} toggle={closeEditor} fade={false} centered size="lg">
-        <ModalHeader toggle={closeEditor}>
-          {selected?.status === "graded"
-            ? "Edit grade and feedback"
-            : "Grade submission"}
-        </ModalHeader>
-        <ModalBody>
-          <div className="grading-context">
-            <span className="eyebrow">Selected submission</span>
-            <strong>{displayName(selected?.student, "Learner")}</strong>
-            <span>{displayName(selected?.assignment, "Assignment")}</span>
-          </div>
-          <Form onSubmit={save}>
-            <FormGroup>
-              <Label>Marks</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                required
-                value={form.grade}
-                onChange={event =>
-                  setForm(current => ({
-                    ...current,
-                    grade: event.target.value,
-                  }))
-                }
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>Feedback</Label>
-              <Input
-                type="textarea"
-                rows="6"
-                value={form.feedback}
-                onChange={event =>
-                  setForm(current => ({
-                    ...current,
-                    feedback: event.target.value,
-                  }))
-                }
-                placeholder="Add useful feedback for the learner"
-              />
-            </FormGroup>
-            <ToastNotification
-              message={error}
-              variant="error"
-              onClose={() => setError("")}
-            />
-            <div className="modal-actions">
-              <Button type="button" color="light" onClick={closeEditor}>
-                Cancel
-              </Button>
-              <Button type="submit" className="btn-coral">
-                {selected?.status === "graded" ? "Save changes" : "Save grade"}
-              </Button>
-            </div>
-          </Form>
-        </ModalBody>
-      </Modal>
-    </>
+          <p className="text-sm text-muted">
+            {rows.length} record{rows.length === 1 ? "" : "s"} shown
+          </p>
+        </div>
+
+        <div
+          role="group"
+          aria-label="Filter grading records"
+          className="flex flex-wrap items-center gap-2"
+        >
+          <SlidersHorizontal
+            size={16}
+            aria-hidden="true"
+            className="text-muted"
+          />
+          {FILTERS.map(filter => (
+            <button
+              key={filter.value}
+              type="button"
+              aria-pressed={grading.filter === filter.value}
+              onClick={() => setFilter(filter.value)}
+              className={classNames(
+                "min-h-9 rounded-full px-3 text-xs font-semibold transition",
+                grading.filter === filter.value
+                  ? "bg-ink text-white"
+                  : "border border-line bg-surface text-muted hover:text-ink"
+              )}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <DataList
+        columns={columns}
+        rows={rows}
+        rowKey={submission => submission._id || submission.id}
+        renderCard={submission => <GradingCard submission={submission} />}
+        loading={grading.loading}
+        error={grading.error}
+        onRetry={() => load()}
+        emptyTitle={
+          grading.query
+            ? "No matching records"
+            : grading.filter === "graded"
+              ? "No graded records"
+              : grading.filter === "needs-review"
+                ? "No submissions need review"
+                : "No submissions yet"
+        }
+        emptyText="Submission records will appear here when learners upload their work."
+      />
+
+      <GradingModal />
+    </div>
   );
 }
+
+const mapState = state => ({
+  grading: state.grading,
+});
+
+const mapDispatch = dispatch => ({
+  load: dispatch.grading.load,
+  setFilter: dispatch.grading.setFilter,
+  setQuery: dispatch.grading.setQuery,
+  openEditor: dispatch.grading.openEditor,
+  clearMessages: dispatch.grading.clearMessages,
+});
+
+export default connect(mapState, mapDispatch)(GradingPage);

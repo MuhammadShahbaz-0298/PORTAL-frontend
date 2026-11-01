@@ -1,234 +1,144 @@
-import { useCallback, useState } from "react";
-import { Button } from "reactstrap";
+/* Batches page: manage teaching cohorts, assigned teachers, and enrollment. */
+import { useEffect, useMemo } from "react";
+import { connect } from "react-redux";
 import { Inbox, Plus } from "lucide-react";
-import { useSelector } from "react-redux";
-import Swal from "sweetalert2";
-import {
-  listBatches,
-  createBatch,
-  updateBatch,
-  deleteBatch,
-  enrollStudent,
-  listBatchStudents,
-} from "../../api/batches";
-import { listUsers } from "../../api/users";
-import { apiError } from "../../api/client";
-import useApiResource from "../../hooks/useApiResource";
-import { LoadingState, PageHeader } from "../../components/ui/PageHeader";
-import BatchCard from "./BatchCard";
-import BatchCreateModal from "./BatchCreateModal";
-import BatchEnrollmentModal from "./BatchEnrollmentModal";
-import { normalizePeople } from "./batchUtils";
+import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+// import EmptyState from "../../components/ui/EmptyState";
+import ErrorState from "../../components/ui/ErrorState";
+import PageHeader from "../../components/ui/PageHeader";
+import SearchInput from "../../components/ui/SearchInput";
+import Spinner from "../../components/ui/Spinner";
+import Toast from "../../components/ui/Toast";
 import { hasPermission } from "../../lib/permissions";
-import ToastNotification from "../../components/ui/ToastNotification";
+import BatchCard from "./BatchCard";
+import BatchEnrollmentModal from "./BatchEnrollmentModal";
+import BatchFormModal from "./BatchFormModal";
+import { teacherName } from "./batchUtils";
+import EmptyState from "../../components/ui/EmptyState";
 
-export default function BatchesPage() {
-  const user = useSelector(state => state.auth.user);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [enrollOpen, setEnrollOpen] = useState(false);
-  const [selectedBatch, setSelectedBatch] = useState(null);
-  const [editingBatch, setEditingBatch] = useState(null);
-  const [enrolled, setEnrolled] = useState([]);
-  const [studentId, setStudentId] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+function BatchesPage({
+  batches,
+  user,
+  load,
+  loadPeople,
+  setQuery,
+  openForm,
+  clearMessages,
+}) {
+  const canCreate = hasPermission(user, "batches.create", ["admin"]);
+  const canEdit = hasPermission(user, "batches.update", ["admin", "teacher"]);
+  const canDelete = hasPermission(user, "batches.delete", ["admin"]);
+  const canEnroll = hasPermission(user, "batches.enroll", ["admin", "teacher"]);
 
-  const listTeachers = useCallback(
-    params => listUsers({ ...(params || {}), role: "teacher" }),
-    []
-  );
-  const listStudents = useCallback(
-    params => listUsers({ ...(params || {}), role: "student" }),
-    []
-  );
-  const batches = useApiResource(listBatches);
-  const teachers = useApiResource(listTeachers, {
-    enabled: user?.role === "admin",
-  });
-  const students = useApiResource(listStudents, {
-    enabled: ["admin", "teacher"].includes(user?.role),
-  });
-
-  const openEnroll = async batch => {
-    setSelectedBatch(batch);
-    setStudentId("");
-    setError("");
-    setEnrollOpen(true);
-    try {
-      const response = await listBatchStudents(batch._id);
-      setEnrolled(normalizePeople(response.data));
-    } catch (requestError) {
-      setError(apiError(requestError));
+  // One mount effect: the cohorts, plus the teacher & student rosters when allowed.
+  useEffect(() => {
+    load();
+    if (canCreate || canEdit || canEnroll) {
+      loadPeople();
     }
-  };
+  }, [load, loadPeople, canCreate, canEdit, canEnroll]);
 
-  const submitCreate = async form => {
-    setError("");
-    try {
-      await createBatch(form);
-      setCreateOpen(false);
-      setNotice("Batch created successfully.");
-      await batches.reload();
-      return true;
-    } catch (requestError) {
-      setError(apiError(requestError));
-      return false;
-    }
-  };
+  const rows = useMemo(() => {
+    const needle = batches.query.trim().toLowerCase();
+    if (!needle) return batches.items;
 
-  const submitUpdate = async form => {
-    if (!editingBatch?._id) return false;
-    setError("");
-    try {
-      await updateBatch(editingBatch._id, form);
-      setCreateOpen(false);
-      setEditingBatch(null);
-      setNotice("Batch updated successfully.");
-      await batches.reload();
-      return true;
-    } catch (requestError) {
-      setError(apiError(requestError));
-      return false;
-    }
-  };
+    return batches.items.filter(batch =>
+      [batch.name, teacherName(batch.teacher)]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(needle))
+    );
+  }, [batches.items, batches.query]);
 
-  const deleteSelectedBatch = async batch => {
-    const confirmation = await Swal.fire({
-      title: "Archive batch?",
-      text: `${batch.name} will be archived. Existing enrollments and history are kept.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Archive batch",
-      cancelButtonText: "Keep it",
-      confirmButtonColor: "#b8563d",
-      cancelButtonColor: "#173044",
-      reverseButtons: true,
-      customClass: {
-        popup: "swal-linen",
-        confirmButton: "swal-confirm",
-        cancelButton: "swal-cancel",
-      },
-    });
-    if (!confirmation.isConfirmed) return;
-
-    setError("");
-    try {
-      await deleteBatch(batch._id);
-      setNotice("Batch archived successfully.");
-      await batches.reload();
-    } catch (requestError) {
-      setError(apiError(requestError));
-    }
-  };
-
-  const submitEnroll = async event => {
-    event.preventDefault();
-    setError("");
-    if (!selectedBatch?._id || !studentId) {
-      setError("Choose a student before enrolling.");
-      return;
-    }
-    try {
-      await enrollStudent(selectedBatch._id, studentId);
-      const response = await listBatchStudents(selectedBatch._id);
-      setEnrolled(normalizePeople(response.data));
-      setStudentId("");
-      setNotice("Student enrolled successfully.");
-      await batches.reload();
-    } catch (requestError) {
-      setError(apiError(requestError));
-    }
-  };
-
-  const canCreate = hasPermission(user, "batches.create");
-  const canEdit = hasPermission(user, "batches.update");
-  const canDelete = hasPermission(user, "batches.delete");
-  const canEnroll = hasPermission(user, "batches.enroll");
+  const message = batches.pageError || batches.notice;
+  const countLabel = batches.query
+    ? `Showing ${rows.length} of ${batches.total} batches`
+    : `Showing ${batches.total} batches`;
 
   return (
-    <>
+    <div className="font-sans">
       <PageHeader
         eyebrow="Cohorts"
         title="Batches"
         description="Manage teaching groups, assigned teachers, and enrollment."
         action={
-          canCreate && (
-            <Button
-              className="btn-coral"
-              onClick={() => {
-                setError("");
-                setCreateOpen(true);
-              }}
-            >
-              <Plus size={15} /> New batch
+          canCreate ? (
+            <Button onClick={() => openForm({ batch: null })}>
+              <Plus size={16} aria-hidden="true" />
+              New batch
             </Button>
-          )
+          ) : null
         }
       />
-      <ToastNotification
-        message={batches.error || notice}
-        variant={batches.error ? "error" : "success"}
-        onClose={() => {
-          if (batches.error) batches.reload();
-          setNotice("");
-        }}
+
+      <Toast
+        message={message}
+        tone={batches.pageError ? "error" : "success"}
+        onClose={clearMessages}
       />
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput
+          value={batches.query}
+          onChange={setQuery}
+          placeholder="Search by batch name or teacher"
+          className="sm:max-w-sm"
+        />
+        <p className="text-sm text-muted">{countLabel}</p>
+      </div>
+
       {batches.loading ? (
-        <LoadingState />
-      ) : (batches.data || []).length === 0 ? (
-        <div className="empty-state empty-state-inline">
-          <Inbox size={28} />
-          <strong>No batches yet</strong>
-          <span>Create your first batch to start assigning students.</span>
-        </div>
+        <Card>
+          <div className="flex justify-center px-6 py-16">
+            <Spinner size="lg" label="Loading batches" className="text-brand" />
+          </div>
+        </Card>
+      ) : batches.error ? (
+        <Card>
+          <ErrorState message={batches.error} onRetry={() => load()} />
+        </Card>
+      ) : rows.length === 0 ? (
+        <Card>
+          <EmptyState
+            title={batches.query ? "No matching batches" : "No batches yet"}
+            text={
+              batches.query
+                ? "Try searching for a different batch name or teacher."
+                : "Create your first batch to start assigning students."
+            }
+          />
+        </Card>
       ) : (
-        <div className="batch-grid">
-          {(batches.data || []).map(batch => (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map(batch => (
             <BatchCard
-              key={batch._id}
+              key={batch._id || batch.id}
               batch={batch}
               canEdit={canEdit}
               canDelete={canDelete}
               canEnroll={canEnroll}
-              onEnroll={openEnroll}
-              onEdit={batch => {
-                setEditingBatch(batch);
-                setError("");
-                setCreateOpen(true);
-              }}
-              onDelete={deleteSelectedBatch}
             />
           ))}
         </div>
       )}
-      <BatchCreateModal
-        isOpen={createOpen}
-        teachers={teachers}
-        error={error}
-        onClose={() => {
-          setCreateOpen(false);
-          setEditingBatch(null);
-          setError("");
-        }}
-        onSubmit={editingBatch ? submitUpdate : submitCreate}
-        mode={editingBatch ? "edit" : "create"}
-        initialValues={
-          editingBatch
-            ? { name: editingBatch.name, teacherId: editingBatch.teacher?._id || editingBatch.teacher || "" }
-            : undefined
-        }
-      />
-      <BatchEnrollmentModal
-        isOpen={enrollOpen}
-        batch={selectedBatch}
-        students={students}
-        enrolled={enrolled}
-        studentId={studentId}
-        error={error}
-        onClose={() => setEnrollOpen(false)}
-        onStudentChange={setStudentId}
-        onSubmit={submitEnroll}
-      />
-    </>
+
+      <BatchFormModal />
+      <BatchEnrollmentModal />
+    </div>
   );
 }
+
+const mapState = state => ({
+  batches: state.batches,
+  user: state.auth.user,
+});
+
+const mapDispatch = dispatch => ({
+  load: dispatch.batches.load,
+  loadPeople: dispatch.batches.loadPeople,
+  setQuery: dispatch.batches.setQuery,
+  openForm: dispatch.batches.openForm,
+  clearMessages: dispatch.batches.clearMessages,
+});
+
+export default connect(mapState, mapDispatch)(BatchesPage);

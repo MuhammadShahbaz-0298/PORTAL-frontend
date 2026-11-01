@@ -7,7 +7,7 @@ import {
   Outlet,
   redirect,
 } from "@tanstack/react-router";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import AppLayout from "../components/layout/AppLayout";
 import LoginPage from "../features/auth/LoginPage";
 import ForceChangePasswordPage from "../features/auth/ForceChangePasswordPage";
@@ -21,25 +21,31 @@ import BatchesPage from "../features/batches/BatchesPage";
 import UsersPage from "../features/users/UsersPage";
 import RolesPage from "../features/roles/RolesPage";
 import ProfilePage from "../features/profile/ProfilePage";
-import { hydrateSession } from "../store/actions/authActions";
+
 const rootRoute = createRootRoute({ component: Root });
+
 function Root() {
   const dispatch = useDispatch();
+
   useEffect(() => {
-    dispatch(hydrateSession());
+    dispatch.auth.bootstrap();
   }, [dispatch]);
+
   return <Outlet />;
 }
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage,
 });
+
 const forceChangePasswordRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/force-change-password",
   component: ForceChangePasswordPage,
 });
+
 const protectedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "protected",
@@ -49,8 +55,10 @@ const protectedRoute = createRoute({
   },
   component: AppLayout,
 });
+
 const child = (path, component) =>
   createRoute({ getParentRoute: () => protectedRoute, path, component });
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   forceChangePasswordRoute,
@@ -72,9 +80,5 @@ const routeTree = rootRoute.addChildren([
     child("/profile", ProfilePage),
   ]),
 ]);
+
 export const router = createRouter({ routeTree, context: { auth: {} } });
-export function RouterProvider() {
-  const auth = useSelector(state => state.auth);
-  return <RouterProviderImpl router={router} context={{ auth }} />;
-}
-import { RouterProvider as RouterProviderImpl } from "@tanstack/react-router";

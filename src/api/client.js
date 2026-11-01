@@ -1,7 +1,6 @@
 import axios from "axios";
 import { env } from "../config/env";
 import { store } from "../store";
-import { logout } from "../store/actions/authActions";
 
 const UNSAFE_METHODS = new Set(["post", "put", "patch", "delete"]);
 const MUST_CHANGE_PASSWORD_MESSAGE =
@@ -40,7 +39,11 @@ client.interceptors.response.use(
       error.response?.data?.error || error.response?.data?.message;
     const originalRequest = error.config;
 
-    if (status === 403 && message === MUST_CHANGE_PASSWORD_MESSAGE && window.location.pathname !== "/force-change-password" ) {
+    if (
+      status === 403 &&
+      message === MUST_CHANGE_PASSWORD_MESSAGE &&
+      window.location.pathname !== "/force-change-password"
+    ) {
       window.location.replace("/force-change-password");
       return Promise.reject(error);
     }
@@ -49,7 +52,7 @@ client.interceptors.response.use(
       if (originalRequest?.skipAuthRefresh) return Promise.reject(error);
 
       if (!originalRequest || originalRequest.retry) {
-        store.dispatch(logout());
+        store.dispatch.auth.logout();
         return Promise.reject(error);
       }
 
@@ -66,7 +69,7 @@ client.interceptors.response.use(
       try {
         await refreshPromise;
       } catch {
-        store.dispatch(logout());
+        store.dispatch.auth.logout();
         return Promise.reject(error);
       }
 
@@ -91,5 +94,7 @@ export const apiError = error => {
     "Something went wrong while completing that request."
   );
 };
+
+export const api = client;
 
 export default client;

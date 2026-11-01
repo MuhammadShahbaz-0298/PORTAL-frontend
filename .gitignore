@@ -9,6 +9,8 @@ build/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
 .env.development.local
 .env.test.local
 .env.production.local
@@ -106,6 +108,12 @@ temp/
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+# Local rebuild artifacts and duplicate, inactive source snapshot
+/src2/
+/AGENTS.md
+/REBUILD_STATUS.md
+/build_errors.txt
 
 # Manus version file (auto-generated, not part of source)
 client/public/__manus__/version.json

@@ -1,31 +1,23 @@
-/* Shared UI exports kept filename-compatible with the reference structure. */
-import { Spinner } from "reactstrap";
-import ToastNotification from "./ToastNotification";
-export function PageHeader({ eyebrow, title, description, action }) {
+/* PageHeader: the title block at the top of every page. */
+export default function PageHeader({ title, description, eyebrow, action }) {
   return (
-    <div className="page-header">
-      <div>
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        {description && <p>{description}</p>}
+    <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0">
+        {eyebrow ? (
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+          {title}
+        </h1>
+        {description ? (
+          <p className="mt-2 max-w-2xl text-sm text-muted sm:text-base">
+            {description}
+          </p>
+        ) : null}
       </div>
-      {action}
-    </div>
+      {action ? <div className="shrink-0">{action}</div> : null}
+    </header>
   );
 }
-export function StatusBadge({ children, tone = "neutral" }) {
-  return <span className={`pill pill-${tone}`}>{children}</span>;
-}
-export function LoadingState({ text = "Loading…" }) {
-  return (
-    <div className="loading-state">
-      <Spinner size="sm" /> {text}
-    </div>
-  );
-}
-export function ErrorState({ message = "Unable to load this section." }) {
-  return (
-    <ToastNotification message={message} variant="error" onClose={() => {}} />
-  );
-}
-export default PageHeader;

@@ -1,292 +1,173 @@
-/* Attendance feature: batch checklist marking with student history for learners. */
-import { useMemo, useState } from "react";
+/* Attendance page: register history plus the staff checklist modal. */
+import { useEffect, useMemo } from "react";
+import { connect } from "react-redux";
+import { Plus } from "lucide-react";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import DataList from "../../components/ui/DataList";
+import PageHeader from "../../components/ui/PageHeader";
+import SearchInput from "../../components/ui/SearchInput";
+import Toast from "../../components/ui/Toast";
+import { hasPermission } from "../../lib/permissions";
+import AttendanceCard from "./AttendanceCard";
+import MarkAttendanceModal from "./MarkAttendanceModal";
 import {
-  Button,
-  Card,
-  CardBody,
-  Form,
-  FormGroup,
-  Input,
-  Label,
-  Modal,
-  ModalBody,
-  ModalHeader,
-} from "reactstrap";
-import { CheckSquare, Plus, Search } from "lucide-react";
-import { useSelector } from "react-redux";
-import { listAttendance, markAttendance } from "../../api/attendance";
-import { apiError } from "../../api/client";
-import { listBatches, listBatchStudents } from "../../api/batches";
-import useApiResource from "../../hooks/useApiResource";
-import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
-import DataTable from "../../components/ui/DataTable";
-import SearchableSelect from "../../components/ui/SearchableSelect";
-import ToastNotification from "../../components/ui/ToastNotification";
-export default function AttendancePage() {
-  const user = useSelector(state => state.auth.user);
+  batchName,
+  formatDate,
+  studentEmail,
+  studentName,
+} from "./attendanceUtils";
+
+function AttendancePage({
+  attendance,
+  user,
+  load,
+  loadBatches,
+  setQuery,
+  openForm,
+  clearMessages,
+}) {
+  const student = user?.role === "student";
   const studentId = user?.id || user?._id || user?.userId;
-  const attendanceParams =
-    user?.role === "student" && studentId ? { studentId } : undefined;
-  const resource = useApiResource(listAttendance, {
-    enabled: Boolean(user),
-    key: `${user?.role || "guest"}:${studentId || "all"}`,
-    params: attendanceParams,
-  });
-  const batches = useApiResource(listBatches, {
-    enabled: Boolean(user),
-    key: `${user?.role || "guest"}:batches`,
-  });
-  const [roster, setRoster] = useState([]);
-  const [presentIds, setPresentIds] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({
-    batchId: "",
-    date: new Date().toISOString().slice(0, 10),
-  });
+  const canMark = hasPermission(user, "attendance.manage", [
+    "admin",
+    "teacher",
+  ]);
 
-  const filteredRecords = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return resource.data || [];
-    return (resource.data || []).filter(record => {
-      const studentName =
-        typeof record.student === "object"
-          ? record.student?.name
-          : record.student;
-      const studentEmail =
-        typeof record.student === "object" ? record.student?.email : "";
-      return [studentName, studentEmail].some(value =>
-        String(value || "")
-          .toLowerCase()
-          .includes(normalizedQuery)
-      );
-    });
-  }, [resource.data, query]);
+  // One mount effect: this learner's history, or the register for staff.
+  useEffect(() => {
+    load({ studentId: student ? studentId : undefined });
+    if (canMark) loadBatches();
+  }, [load, loadBatches, student, studentId, canMark]);
 
-  const loadChecklist = async (batchId, date) => {
-    if (!batchId) return;
-    try {
-      const [{ data: students }, { data: records }] = await Promise.all([
-        listBatchStudents(batchId),
-        listAttendance({ batchId, date }),
-      ]);
-      const nextRoster = Array.isArray(students)
-        ? students
-        : students?.students || [];
-      const existing = Array.isArray(records)
-        ? records
-        : records?.records || [];
-      setRoster(nextRoster);
-      setPresentIds(
-        existing
-          .filter(record => record.status === "present")
-          .map(record => record.student?._id || record.student)
-      );
-    } catch (requestError) {
-      setError(apiError(requestError));
-    }
-  };
-  const selectBatch = async batchId => {
-    setForm(current => ({ ...current, batchId }));
-    setRoster([]);
-    setPresentIds([]);
-    setError("");
-    if (batchId) await loadChecklist(batchId, form.date);
-  };
-  const selectDate = async date => {
-    setForm(current => ({ ...current, date }));
-    setPresentIds([]);
-    setError("");
-    if (form.batchId) await loadChecklist(form.batchId, date);
-  };
-  const togglePresent = selectedStudentId =>
-    setPresentIds(current =>
-      current.includes(selectedStudentId)
-        ? current.filter(id => id !== selectedStudentId)
-        : [...current, selectedStudentId]
+  const rows = useMemo(() => {
+    const needle = attendance.query.trim().toLowerCase();
+    if (!needle) return attendance.items;
+
+    return attendance.items.filter(item =>
+      [
+        studentName(item.student),
+        studentEmail(item.student),
+        batchName(item.batch || item.batchName),
+      ]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(needle))
     );
-  const submit = async event => {
-    event.preventDefault();
-    setError("");
-    if (!form.batchId || !roster.length)
-      return setError("Select a batch with students first.");
-    try {
-      await Promise.all(
-        roster.map(student =>
-          markAttendance({
-            studentId: student._id,
-            batchId: form.batchId,
-            date: form.date,
-            status: presentIds.includes(student._id) ? "present" : "absent",
-          })
-        )
-      );
-      setOpen(false);
-      setError("");
-      setNotice(`Attendance saved for ${roster.length} students.`);
-      try {
-        await resource.reload();
-      } catch (reloadError) {
-        setError(
-          `Attendance was saved, but the history could not refresh. ${apiError(reloadError)}`
-        );
-      }
-    } catch (requestError) {
-      setError(apiError(requestError));
-    }
-  };
-  const canMark = user?.role === "admin" || user?.role === "teacher";
+  }, [attendance.items, attendance.query]);
+
+  const message = attendance.pageError || attendance.notice;
+  const countLabel = attendance.query
+    ? `Showing ${rows.length} of ${attendance.total} records`
+    : `Showing ${attendance.total} records`;
+
+  const columns = [
+    {
+      key: "student",
+      label: "Student",
+      render: record => (
+        <div className="min-w-0">
+          <p className="font-semibold text-ink">
+            {studentName(record.student)}
+          </p>
+          <p className="text-xs text-muted">
+            {studentEmail(record.student) || "No email on record"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "batch",
+      label: "Batch",
+      render: record => batchName(record.batch || record.batchName),
+    },
+    {
+      key: "date",
+      label: "Date",
+      render: record => formatDate(record.date),
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: record => (
+        <Badge tone={record.status === "present" ? "success" : "danger"}>
+          {record.status || "absent"}
+        </Badge>
+      ),
+    },
+  ];
 
   return (
-    <>
+    <div className="font-sans">
       <PageHeader
         eyebrow="Daily register"
         title="Attendance"
         description={
-          user?.role === "student"
+          student
             ? "Review the days you were present and absent."
             : "Select a batch, then mark present students in one pass."
         }
         action={
           canMark ? (
-            <Button
-              className="btn-coral"
-              onClick={() => {
-                setError("");
-                setOpen(true);
-              }}
-            >
-              <Plus size={15} /> Mark batch attendance
+            <Button onClick={openForm}>
+              <Plus size={16} aria-hidden="true" />
+              Mark attendance
             </Button>
           ) : null
         }
       />
-      <ToastNotification
-        message={error || notice}
-        variant={error ? "error" : "success"}
-        onClose={() => {
-          setError("");
-          setNotice("");
-        }}
+
+      <Toast
+        message={message}
+        tone={attendance.pageError ? "error" : "success"}
+        onClose={clearMessages}
       />
-      <Card className="table-card">
-        <CardBody>
-          <div className="toolbar">
-            <div className="searchbox">
-              <Search size={16} />
-              <Input
-                placeholder="Search by student name or email"
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-              />
-            </div>
-          </div>
-          <DataTable
-            columns={["Student", "Email", "Batch", "Date", "Status"]}
-            rows={filteredRecords}
-            loading={resource.loading}
-            error={resource.error}
-            onRetry={resource.reload}
-            empty={{
-              title: "No attendance history",
-              text: query
-                ? "No attendance records match your search."
-                : user?.role === "student"
-                  ? "Your attendance entries will appear here."
-                  : "Choose a batch to record today’s register.",
-            }}
-            renderRow={item => (
-              <tr key={item._id}>
-                <td>{item.student?.name || item.student || "Student"}</td>
-                <td>{item.student?.email || "—"}</td>
-                <td>
-                  {item.batch?.name || item.batchName || "Deleted batch"}
-                </td>
-                <td>
-                  {item.date ? new Date(item.date).toLocaleDateString() : "—"}
-                </td>
-                <td>
-                  <StatusBadge
-                    tone={item.status === "present" ? "olive" : "coral"}
-                  >
-                    {item.status || "absent"}
-                  </StatusBadge>
-                </td>
-              </tr>
-            )}
-          />
-        </CardBody>
-      </Card>
-      <Modal
-        isOpen={open}
-        toggle={() => setOpen(false)}
-        fade={false}
-        centered
-        size="lg"
-      >
-        <ModalHeader toggle={() => setOpen(false)}>
-          Mark batch attendance
-        </ModalHeader>
-        <ModalBody>
-          <Form onSubmit={submit}>
-            <SearchableSelect
-              label="Batch"
-              placeholder="Search batches"
-              required
-              value={form.batchId}
-              options={batches.data || []}
-              getValue={batch => batch._id}
-              getLabel={batch => batch.name}
-              onChange={selectBatch}
-            />
-            <FormGroup>
-              <Label>Date</Label>
-              <Input
-                type="date"
-                required
-                value={form.date}
-                onChange={event => selectDate(event.target.value)}
-              />
-            </FormGroup>
-            <div className="attendance-checklist">
-              <div className="checklist-heading">
-                <span>Students in selected batch</span>
-                <small>Checked = present · unchecked = absent</small>
-              </div>
-              {roster.map(student => (
-                <label className="attendance-check" key={student._id}>
-                  <input
-                    type="checkbox"
-                    checked={presentIds.includes(student._id)}
-                    onChange={() => togglePresent(student._id)}
-                  />
-                  <span>{student.name}</span>
-                  <small>{student.email}</small>
-                </label>
-              ))}
-              {form.batchId && !roster.length && (
-                <p className="muted">
-                  No students are enrolled in this batch yet.
-                </p>
-              )}
-            </div>
-            <ToastNotification
-              message={error}
-              variant="error"
-              onClose={() => setError("")}
-            />
-            <Button
-              type="submit"
-              className="btn-coral w-100"
-              disabled={!roster.length}
-            >
-              <CheckSquare size={15} /> Save attendance
-            </Button>
-          </Form>
-        </ModalBody>
-      </Modal>
-    </>
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput
+          value={attendance.query}
+          onChange={setQuery}
+          placeholder="Search by student name, email, or batch"
+          className="sm:max-w-sm"
+        />
+        <p className="text-sm text-muted">{countLabel}</p>
+      </div>
+
+      <DataList
+        columns={columns}
+        rows={rows}
+        rowKey={record => record._id || record.id}
+        renderCard={record => <AttendanceCard record={record} />}
+        loading={attendance.loading}
+        error={attendance.error}
+        onRetry={() => load({ studentId: student ? studentId : undefined })}
+        emptyTitle={
+          attendance.query ? "No matching records" : "No attendance history"
+        }
+        emptyText={
+          attendance.query
+            ? "Try a different student name, email, or batch."
+            : student
+              ? "Your attendance entries will appear here."
+              : "Mark a batch register to start the history."
+        }
+      />
+
+      {canMark ? <MarkAttendanceModal studentId={studentId} /> : null}
+    </div>
   );
 }
+
+const mapState = state => ({
+  attendance: state.attendance,
+  user: state.auth.user,
+});
+
+const mapDispatch = dispatch => ({
+  load: dispatch.attendance.load,
+  loadBatches: dispatch.attendance.loadBatches,
+  setQuery: dispatch.attendance.setQuery,
+  openForm: dispatch.attendance.openForm,
+  clearMessages: dispatch.attendance.clearMessages,
+});
+
+export default connect(mapState, mapDispatch)(AttendancePage);

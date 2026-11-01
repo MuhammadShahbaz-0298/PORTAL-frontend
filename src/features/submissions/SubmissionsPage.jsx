@@ -1,111 +1,144 @@
-/* Submissions feature: student upload plus teacher/admin review and student grade visibility. */
-import { useState } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  Form,
-  FormGroup,
-  Input,
-  Label,
-} from "reactstrap";
-import { Download, Upload } from "lucide-react";
-import { useSelector } from "react-redux";
-import {
-  listSubmissions,
-  saveSubmissionFile,
-  downloadSubmission,
-} from "../../api/submissions";
-import { listAssignments } from "../../api/assignments";
-import useApiResource from "../../hooks/useApiResource";
-import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
-import DataTable from "../../components/ui/DataTable";
-import ToastNotification from "../../components/ui/ToastNotification";
-import SearchableSelect from "../../components/ui/SearchableSelect";
-import ProgressBar from "../../components/ui/ProgressBar";
-import { getProgressPercentage } from "../../lib/transferProgress";
-export default function SubmissionsPage() {
-  const user = useSelector(state => state.auth.user);
-  const resource = useApiResource(listSubmissions);
-  const assignments = useApiResource(listAssignments, {
-    enabled: user?.role === "student",
-  });
-  const [assignmentId, setAssignmentId] = useState("");
-  const [file, setFile] = useState(null);
-  const [notice, setNotice] = useState("");
-  const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
-  const [downloadingId, setDownloadingId] = useState(null);
-  const [downloadProgress, setDownloadProgress] = useState(null);
-  const selectedSubmission = (resource.data || []).find(
-    submission =>
-      String(submission.assignment?._id || submission.assignment) ===
-      assignmentId
-  );
-  let submitLabel = selectedSubmission
-    ? "Edit submission"
-    : "Upload submission";
-  if (uploading) {
-    submitLabel = selectedSubmission ? "Updating..." : "Uploading...";
-  }
-  const submit = async event => {
-    event.preventDefault();
-    setError("");
-    setNotice("");
-    if (!assignmentId || !file)
-      return setError("Choose an assignment and ZIP file.");
-    setUploading(true);
-    setUploadProgress(0);
-    try {
-      await saveSubmissionFile({
-        assignmentId,
-        submissionId: selectedSubmission?._id,
-        file,
-        onUploadProgress: event =>
-          setUploadProgress(getProgressPercentage(event)),
-      });
-      setNotice(
-        selectedSubmission
-          ? "Submission updated successfully."
-          : "Submission uploaded successfully."
-      );
-      setFile(null);
-      await resource.reload();
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.error ||
-          `Unable to ${selectedSubmission ? "update" : "upload"} submission.`
-      );
-    } finally {
-      setUploading(false);
-      setUploadProgress(null);
-    }
-  };
-  const download = async (id, name) => {
-    setError("");
-    setDownloadingId(id);
-    setDownloadProgress(0);
-    try {
-      const response = await downloadSubmission(id, progressEvent => {
-        setDownloadProgress(getProgressPercentage(progressEvent));
-      });
-      const url = URL.createObjectURL(response.data);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = name || "submission.zip";
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch {
-      setError("Unable to download submission.");
-    } finally {
-      setDownloadingId(null);
-      setDownloadProgress(null);
-    }
-  };
+/* Submissions page: the review inbox for staff and the upload desk for students. */
+import { useEffect, useMemo } from "react";
+import { connect } from "react-redux";
+import { Link } from "@tanstack/react-router";
+import { Plus, SlidersHorizontal } from "lucide-react";
+import Badge from "../../components/ui/Badge";
+import Button, { buttonClassName } from "../../components/ui/Button";
+import DataList from "../../components/ui/DataList";
+import PageHeader from "../../components/ui/PageHeader";
+import SearchInput from "../../components/ui/SearchInput";
+import Toast from "../../components/ui/Toast";
+import SubmissionCard from "./SubmissionCard";
+import SubmissionDownload from "./SubmissionDownload";
+import SubmissionUploadModal from "./SubmissionUploadModal";
+
+const assignmentId = submission => {
+  const assignment = submission.assignment;
+  return typeof assignment === "object"
+    ? assignment?._id || assignment?.id
+    : assignment;
+};
+
+const assignmentTitle = submission =>
+  typeof submission.assignment === "object"
+    ? submission.assignment?.title || "Assignment"
+    : submission.assignment || "Assignment";
+
+const studentName = submission => {
+  const student = submission.student;
+  if (typeof student === "object" && student) return student.name || "Learner";
+  return student || "Learner";
+};
+
+function SubmissionsPage({
+  submissions,
+  user,
+  load,
+  loadAssignments,
+  setQuery,
+  openUpload,
+  clearMessages,
+}) {
   const student = user?.role === "student";
+
+  // One mount effect: the inbox, plus the assignment list used by the upload form.
+  useEffect(() => {
+    load();
+    if (student) loadAssignments();
+  }, [load, loadAssignments, student]);
+
+  const rows = useMemo(() => {
+    const needle = submissions.query.trim().toLowerCase();
+    if (!needle) return submissions.items;
+
+    return submissions.items.filter(item =>
+      [studentName(item), assignmentTitle(item), item.status, item.feedback]
+        .filter(Boolean)
+        .some(value => String(value).toLowerCase().includes(needle))
+    );
+  }, [submissions.items, submissions.query]);
+
+  const message = submissions.pageError || submissions.notice;
+  const countLabel = submissions.query
+    ? `Showing ${rows.length} of ${submissions.total} submissions`
+    : `Showing ${submissions.total} submissions`;
+
+  const columns = [
+    {
+      key: "student",
+      label: "Learner",
+      render: submission => (
+        <span className="font-semibold text-ink">
+          {studentName(submission)}
+        </span>
+      ),
+    },
+    {
+      key: "assignment",
+      label: "Assignment",
+      render: submission => {
+        const id = assignmentId(submission);
+        return id ? (
+          <Link
+            to="/assignments/$assignmentId"
+            params={{ assignmentId: id }}
+            className="text-ink underline-offset-4 hover:text-brand hover:underline"
+          >
+            {assignmentTitle(submission)}
+          </Link>
+        ) : (
+          assignmentTitle(submission)
+        );
+      },
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: submission => (
+        <Badge tone={submission.status === "graded" ? "success" : "warning"}>
+          {submission.status || "submitted"}
+        </Badge>
+      ),
+    },
+    {
+      key: "grade",
+      label: "Grade",
+      render: submission => submission.grade ?? "—",
+    },
+    {
+      key: "feedback",
+      label: "Feedback",
+      className: "max-w-[16rem]",
+      render: submission => (
+        <span className="line-clamp-2 text-muted">
+          {submission.feedback || "—"}
+        </span>
+      ),
+    },
+    {
+      key: "file",
+      label: "File",
+      render: submission => <SubmissionDownload submission={submission} />,
+    },
+    {
+      key: "action",
+      label: "Action",
+      className: "text-right",
+      render: submission =>
+        student ? null : (
+          <Link
+            to="/grading"
+            className="inline-flex min-h-9 items-center rounded-control px-2 text-xs font-semibold text-brand transition hover:bg-brand-soft"
+          >
+            Grade
+          </Link>
+        ),
+    },
+  ];
+
   return (
-    <>
+    <div className="font-sans">
       <PageHeader
         eyebrow={student ? "Your work" : "Submission inbox"}
         title="Submissions"
@@ -114,122 +147,77 @@ export default function SubmissionsPage() {
             ? "Track status, grades, and feedback on your work."
             : "Review learner work and open the grading desk."
         }
+        action={
+          student ? (
+            <Button onClick={openUpload}>
+              <Plus size={16} aria-hidden="true" />
+              Upload submission
+            </Button>
+          ) : (
+            <Link to="/grading" className={buttonClassName("secondary")}>
+              <SlidersHorizontal size={16} aria-hidden="true" />
+              Open grading
+            </Link>
+          )
+        }
       />
-      <ToastNotification
-        message={error || notice}
-        variant={error ? "error" : "success"}
-        onClose={() => {
-          setError("");
-          setNotice("");
-        }}
+
+      <Toast
+        message={message}
+        tone={submissions.pageError ? "error" : "success"}
+        onClose={clearMessages}
       />
-      <Card className="table-card">
-        <CardBody>
-          <DataTable
-            columns={[
-              "Learner",
-              "Assignment",
-              "Status",
-              "Grade",
-              "Feedback",
-              "File",
-            ]}
-            rows={resource.data || []}
-            loading={resource.loading}
-            error={resource.error}
-            onRetry={resource.reload}
-            renderRow={item => (
-              <tr key={item._id}>
-                <td>{item.student?.name || item.student || "Learner"}</td>
-                <td>
-                  {item.assignment?.title || item.assignment || "Assignment"}
-                </td>
-                <td>
-                  <StatusBadge
-                    tone={item.status === "graded" ? "olive" : "coral"}
-                  >
-                    {item.status || "submitted"}
-                  </StatusBadge>
-                </td>
-                <td>{item.grade ?? "—"}</td>
-                <td className="feedback-cell">{item.feedback || "—"}</td>
-                <td>
-                  {downloadingId !== item._id && (
-                    <Button
-                      color="link"
-                      className="icon-button"
-                      onClick={() => download(item._id, item.fileName)}
-                      disabled={downloadingId !== null}
-                      aria-label="Download submission"
-                    >
-                      <Download size={16} />
-                    </Button>
-                  )}
-                  {downloadingId === item._id && (
-                    <ProgressBar
-                      value={downloadProgress}
-                      label="Downloading..."
-                      valueLabel=""
-                    />
-                  )}
-                </td>
-              </tr>
-            )}
-          />
-        </CardBody>
-      </Card>
-      {student && (
-        <Card className="form-card">
-          <CardBody>
-            <div className="eyebrow">Submit work</div>
-            <h2>
-              {selectedSubmission
-                ? "Edit your submission"
-                : "Upload a ZIP archive"}
-            </h2>
-            <Form onSubmit={submit}>
-              <SearchableSelect
-                label="Assignment"
-                placeholder="Search assignments"
-                required
-                value={assignmentId}
-                options={assignments.data || []}
-                getValue={assignment => assignment._id}
-                getLabel={assignment => assignment.title}
-                onChange={setAssignmentId}
-              />
-              <FormGroup>
-                <Label>
-                  {selectedSubmission ? "Replacement ZIP file" : "ZIP file"}
-                </Label>
-                <Input
-                  required
-                  type="file"
-                  accept=".zip,application/zip"
-                  disabled={uploading}
-                  onChange={event => setFile(event.target.files?.[0])}
-                />
-              </FormGroup>
-              <Button
-                type="submit"
-                className="btn-coral"
-                disabled={uploading}
-              >
-                <Upload size={15} />{" "}
-                {submitLabel}
-              </Button>
-              {uploading && (
-                <ProgressBar
-                  value={uploadProgress}
-                  label="Uploading..."
-                  valueLabel=""
-                  completedLabel="Processing submission..."
-                />
-              )}
-            </Form>
-          </CardBody>
-        </Card>
-      )}
-    </>
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput
+          value={submissions.query}
+          onChange={setQuery}
+          placeholder="Search learner, assignment, or feedback"
+          className="sm:max-w-sm"
+        />
+        <p className="text-sm text-muted">{countLabel}</p>
+      </div>
+
+      <DataList
+        columns={columns}
+        rows={rows}
+        rowKey={submission => submission._id || submission.id}
+        renderCard={submission => <SubmissionCard submission={submission} />}
+        loading={submissions.loading}
+        error={submissions.error}
+        onRetry={() => load()}
+        emptyTitle={
+          submissions.query
+            ? "No matching submissions"
+            : student
+              ? "No submissions yet"
+              : "Nothing in the inbox"
+        }
+        emptyText={
+          submissions.query
+            ? "Try a different learner, assignment, or status."
+            : student
+              ? "Upload a ZIP archive to get started."
+              : "Learner work will appear here when it is uploaded."
+        }
+      />
+
+      <SubmissionUploadModal />
+    </div>
   );
 }
+
+const mapState = state => ({
+  submissions: state.submissions,
+  user: state.auth.user,
+});
+
+const mapDispatch = dispatch => ({
+  load: dispatch.submissions.load,
+  loadAssignments: dispatch.submissions.loadAssignments,
+  setQuery: dispatch.submissions.setQuery,
+  openUpload: dispatch.submissions.openUpload,
+  clearMessages: dispatch.submissions.clearMessages,
+});
+
+export default connect(mapState, mapDispatch)(SubmissionsPage);

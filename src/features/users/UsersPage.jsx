@@ -1,397 +1,171 @@
-/* Users feature: admin account creation and account lifecycle controls with SweetAlert confirmations. */
-import { useMemo, useState } from "react";
-import {
-  Button,
-  Card,
-  CardBody,
-  Form,
-  FormGroup,
-  Input,
-  Label,
-  Modal,
-  ModalBody,
-  ModalHeader,
-} from "reactstrap";
-import { Check, Copy, KeyRound, MoreHorizontal, Plus, Search } from "lucide-react";
-import { useSelector } from "react-redux";
-import Swal from "sweetalert2";
-import "sweetalert2/dist/sweetalert2.min.css";
-import { register } from "../../api/auth";
-import { listUsers, updateUser, deleteUser, resetPassword } from "../../api/users";
-import { listRoles } from "../../api/roles";
+/* Users page: search, create, and account lifecycle controls backed by the users model. */
+import { useEffect, useMemo } from "react";
+import { connect } from "react-redux";
+import { Plus } from "lucide-react";
+import Avatar from "../../components/ui/Avatar";
+import Badge from "../../components/ui/Badge";
+import Button from "../../components/ui/Button";
+import DataList from "../../components/ui/DataList";
+import PageHeader from "../../components/ui/PageHeader";
+import SearchInput from "../../components/ui/SearchInput";
+import Toast from "../../components/ui/Toast";
+import { filterItems } from "../../lib/listHelper";
 import { hasPermission } from "../../lib/permissions";
-import useApiResource from "../../hooks/useApiResource";
-import { PageHeader, StatusBadge } from "../../components/ui/PageHeader";
-import DataTable from "../../components/ui/DataTable";
-import SearchableSelect from "../../components/ui/SearchableSelect";
-import ToastNotification from "../../components/ui/ToastNotification";
+import { roleLabel } from "../../lib/roles";
+import CredentialsModal from "./CredentialsModal";
+import UserActions from "./UserActions";
+import UserCard from "./UserCard";
+import UserFormModal from "./UserFormModal";
 
-const generatePassword = () =>
-  `${crypto.randomUUID().slice(0, 8)}${Math.floor(Math.random() * 90 + 10)}`;
-const coreAccountRoles = [
-  { name: "admin", label: "Administrator" },
-  { name: "teacher", label: "Teacher" },
-  { name: "student", label: "Student" },
-];
-const fetchRoles = () =>
-  listRoles().then(response => ({
-    ...response,
-    data: response.data?.roles || [],
-  }));
+const SEARCH_FIELDS = ["name", "email", "role"];
 
-export default function UsersPage() {
-  const resource = useApiResource(listUsers);
-  const roles = useApiResource(fetchRoles);
-  const currentUser = useSelector(state => state.auth.user);
-  const canManageUsers =
-    currentUser?.role === "admin" ||
-    hasPermission(currentUser, "users.manage");
-  const roleOptions = useMemo(
-    () => [
-      ...new Map(
-        [...coreAccountRoles, ...(roles.data || [])]
-          .filter(role => role.name || role.role)
-          .map(role => [role.name || role.role, role])
-      ).values(),
-    ],
-    [roles.data]
-  );
-  const [query, setQuery] = useState("");
-  const [open, setOpen] = useState(false);
-  const [credentials, setCredentials] = useState(null);
-  const [actioning, setActioning] = useState(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    role: "student",
-  });
+function UsersPage({
+  users,
+  currentUser,
+  load,
+  loadRoles,
+  setQuery,
+  openForm,
+  clearMessages,
+  clearCredentials,
+}) {
+  // One mount effect: load accounts and the optional role catalogue.
+  useEffect(() => {
+    load();
+    loadRoles();
+    return () => clearCredentials();
+  }, [load, loadRoles, clearCredentials]);
+
   const rows = useMemo(
-    () =>
-      (resource.data || []).filter(item =>
-        `${item.name} ${item.email} ${item.role}`
-          .toLowerCase()
-          .includes(query.toLowerCase())
-      ),
-    [resource.data, query]
+    () => filterItems(users.items, users.query, SEARCH_FIELDS),
+    [users.items, users.query]
   );
 
-  const submit = async event => {
-    event.preventDefault();
-    setError("");
-    const password = generatePassword();
-    try {
-      // Build payload without empty optional fields
-      const payload = {
-        name: form.name,
-        email: form.email,
-        role: form.role,
-        password,
-      };
-      if (form.batchId) payload.batchId = form.batchId;
+  const canCreate = hasPermission(currentUser, "students.create", [
+    "admin",
+    "teacher",
+  ]);
+  const message = users.pageError || users.notice;
+  const countLabel = users.query
+    ? `Showing ${rows.length} of ${users.total} accounts`
+    : `Showing ${users.total} accounts`;
 
-      await register(payload);
-      setCredentials({ email: form.email, password });
-      setOpen(false);
-      setForm({ name: "", email: "", role: "student" });
-      setNotice("User account created successfully.");
-      await resource.reload();
-    } catch (requestError) {
-      setError(requestError.response?.data?.error || "Unable to create user.");
-    }
-  };
-
-  const openUserActions = async account => {
-    const shouldActivate = account.active === false;
-    const result = await Swal.fire({
-      title: "Manage account",
-      text: `${account.name || "This user"} (${account.role})`,
-      icon: "question",
-      showDenyButton: true,
-      showCancelButton: true,
-      confirmButtonText: shouldActivate ? "Activate" : "Deactivate",
-      denyButtonText: "Delete",
-      cancelButtonText: "Close",
-      confirmButtonColor: shouldActivate ? "#173044" : "#b8563d",
-      denyButtonColor: "#b8563d",
-      cancelButtonColor: "#173044",
-      reverseButtons: true,
-      customClass: {
-        popup: "swal-linen",
-        confirmButton: "swal-confirm",
-        denyButton: "swal-delete",
-        cancelButton: "swal-cancel",
-      },
-    });
-
-    if (result.isConfirmed) {
-      setActioning(account._id);
-      setError("");
-      try {
-        await updateUser(account._id, { active: shouldActivate });
-        setNotice(
-          `${account.name || "User"} ${shouldActivate ? "activated" : "deactivated"} successfully.`,
-        );
-        await resource.reload();
-      } catch (requestError) {
-        setError(
-          requestError.response?.data?.error ||
-          `Unable to ${shouldActivate ? "activate" : "deactivate"} account.`
-        );
-      } finally {
-        setActioning(null);
-      }
-      return;
-    }
-
-    if (result.isDenied) {
-      const confirmation = await Swal.fire({
-        title: "Deactivate and archive user?",
-        text: `${account.name || "This user"} will be deactivated and archived. Their history is kept.`,
-        icon: "error",
-        showCancelButton: true,
-        confirmButtonText: "Deactivate user",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#b8563d",
-        cancelButtonColor: "#173044",
-        reverseButtons: true,
-        customClass: {
-          popup: "swal-linen",
-          confirmButton: "swal-confirm",
-          cancelButton: "swal-cancel",
-        },
-      });
-
-      if (!confirmation.isConfirmed) return;
-
-      setActioning(account._id);
-      setError("");
-      try {
-        await deleteUser(account._id);
-        setNotice(`${account.name || "User"} archived successfully.`);
-        await resource.reload();
-      } catch (requestError) {
-        setError(requestError.response?.data?.error || "Unable to delete user.");
-      } finally {
-        setActioning(null);
-      }
-    }
-  };
-
-  const handleResetPassword = async account => {
-    const confirmation = await Swal.fire({
-      title: "Reset password?",
-      text: `Reset password for ${account.name || account.email}? They will be forced to change it on next login. This cannot be undone.`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Reset password",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#b8563d",
-      cancelButtonColor: "#173044",
-      reverseButtons: true,
-      customClass: {
-        popup: "swal-linen",
-        confirmButton: "swal-confirm",
-        cancelButton: "swal-cancel",
-      },
-    });
-
-    if (!confirmation.isConfirmed) return;
-
-    setActioning(account._id);
-    setError("");
-    try {
-      const { data } = await resetPassword(account._id);
-      setCredentials({
-        email: account.email,
-        password: data.temporaryPassword,
-      });
-      setNotice("Temporary password generated successfully.");
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.error || "Unable to reset password."
-      );
-    } finally {
-      setActioning(null);
-    }
-  };
+  const columns = [
+    {
+      key: "name",
+      label: "Name",
+      render: user => (
+        <div className="flex min-w-0 items-center gap-3">
+          <Avatar name={user.name} size="sm" />
+          <span className="truncate font-semibold text-ink">{user.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: "email",
+      label: "Email",
+      render: user => <span className="text-muted">{user.email}</span>,
+    },
+    {
+      key: "role",
+      label: "Role",
+      render: user => <Badge tone="brand">{roleLabel(user.role)}</Badge>,
+    },
+    {
+      key: "status",
+      label: "Status",
+      render: user => (
+        <Badge
+          tone={
+            user.archivedAt
+              ? "neutral"
+              : user.active === false
+                ? "danger"
+                : "success"
+          }
+        >
+          {user.archivedAt
+            ? "Archived"
+            : user.active === false
+              ? "Inactive"
+              : "Active"}
+        </Badge>
+      ),
+    },
+    {
+      key: "actions",
+      label: "Actions",
+      className: "text-right",
+      render: user => <UserActions user={user} />,
+    },
+  ];
 
   return (
-    <>
+    <div className="font-sans">
       <PageHeader
         eyebrow="People directory"
         title="Users"
         description="Create and manage accounts for every active role."
         action={
-          <Button
-            className="btn-coral"
-            onClick={() => {
-              setError("");
-              setOpen(true);
-            }}
-          >
-            <Plus size={15} /> Create user
-          </Button>
-        }
-      />
-      <ToastNotification
-        message={error || notice}
-        variant={error ? "error" : "success"}
-        onClose={() => {
-          setError("");
-          setNotice("");
-        }}
-      />
-      <Card className="table-card">
-        <CardBody>
-          <div className="toolbar">
-            <div className="searchbox">
-              <Search size={16} />
-              <Input
-                placeholder="Search name, email, or role"
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-              />
-            </div>
-          </div>
-          <DataTable
-            columns={["Name", "Email", "Role", "Status", "Actions"]}
-            rows={rows}
-            loading={resource.loading}
-            error={resource.error}
-            onRetry={resource.reload}
-            renderRow={item => (
-              <tr key={item._id}>
-                <td>{item.name}</td>
-                <td>{item.email}</td>
-                <td>
-                  <StatusBadge tone="blue">{item.role}</StatusBadge>
-                </td>
-                <td>
-                  <StatusBadge tone={item.active === false ? "danger" : "success"}>
-                    {item.active === false ? "Inactive" : "Active"}
-                  </StatusBadge>
-                </td>
-                <td className="table-actions-cell">
-                  <div className="table-inline-actions">
-                    <Button
-                      color="light"
-                      className="table-action"
-                      disabled={actioning === item._id}
-                      onClick={() => openUserActions(item)}
-                      aria-label={`Manage ${item.name}`}
-                    >
-                      <MoreHorizontal size={15} /> Actions
-                    </Button>
-                    {canManageUsers && (
-                      <Button
-                        color="light"
-                        className="table-action"
-                        disabled={actioning === item._id}
-                        onClick={() => handleResetPassword(item)}
-                        aria-label={`Reset password for ${item.name}`}
-                      >
-                        <KeyRound size={15} /> Reset password
-                      </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-          <p className="muted mt-3">Showing {resource.total} accounts</p>
-        </CardBody>
-      </Card>
-      <Modal isOpen={open} toggle={() => setOpen(false)} fade={false} centered>
-        <ModalHeader toggle={() => setOpen(false)}>Create account</ModalHeader>
-        <ModalBody>
-          <Form onSubmit={submit}>
-            <FormGroup>
-              <Label>Full name</Label>
-              <Input
-                required
-                value={form.name}
-                onChange={event =>
-                  setForm({ ...form, name: event.target.value })
-                }
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>Email</Label>
-              <Input
-                required
-                type="email"
-                value={form.email}
-                onChange={event =>
-                  setForm({ ...form, email: event.target.value })
-                }
-              />
-            </FormGroup>
-            <SearchableSelect
-              label="Account role"
-              placeholder="Search roles"
-              required
-              value={form.role}
-              options={roleOptions}
-              getValue={role => role.name || role.role}
-              getLabel={role => role.label || role.name || role.role}
-              onChange={value => setForm({ ...form, role: value })}
-            />
-            <ToastNotification
-              message={error}
-              variant="error"
-              onClose={() => setError("")}
-            />
-            <p className="form-note">
-              A one-time password is generated after creation and shown only in
-              the confirmation panel.
-            </p>
-            <Button type="submit" className="btn-coral w-100">
+          canCreate ? (
+            <Button onClick={openForm}>
+              <Plus size={16} aria-hidden="true" />
               Create account
             </Button>
-          </Form>
-        </ModalBody>
-      </Modal>
-      <Modal
-        isOpen={Boolean(credentials)}
-        toggle={() => setCredentials(null)}
-        fade={false}
-        centered
-      >
-        <ModalHeader toggle={() => setCredentials(null)}>
-          <Check size={18} /> Account created
-        </ModalHeader>
-        <ModalBody>
-          <p>
-            Share these credentials securely with the new account holder. They
-            are not stored in the browser.
-          </p>
-          <div className="credential-box">
-            <div>
-              <span>Email</span>
-              <strong>{credentials?.email}</strong>
-            </div>
-            <div>
-              <span>Initial password</span>
-              <strong>{credentials?.password}</strong>
-            </div>
-            <Button
-              color="light"
-              onClick={() =>
-                navigator.clipboard?.writeText(
-                  `${credentials?.email}\n${credentials?.password}`
-                )
-              }
-            >
-              <Copy size={15} /> Copy
-            </Button>
-          </div>
-          <p className="form-note">
-            This password will not be shown again. Share it with the user now.
-          </p>
-        </ModalBody>
-      </Modal>
-    </>
+          ) : null
+        }
+      />
+
+      <Toast
+        message={message}
+        tone={users.pageError ? "error" : "success"}
+        onClose={clearMessages}
+      />
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <SearchInput
+          value={users.query}
+          onChange={setQuery}
+          placeholder="Search name, email, or role"
+          className="sm:max-w-sm"
+        />
+        <p className="text-sm text-muted">{countLabel}</p>
+      </div>
+
+      <DataList
+        columns={columns}
+        rows={rows}
+        rowKey={user => user.id || user._id}
+        renderCard={user => <UserCard user={user} />}
+        loading={users.loading}
+        error={users.error}
+        onRetry={load}
+        emptyTitle={users.query ? "No matching accounts" : "No accounts yet"}
+        emptyText={
+          users.query
+            ? "Try a different name, email, or role."
+            : "Create the first account to get started."
+        }
+      />
+
+      <UserFormModal />
+      <CredentialsModal />
+    </div>
   );
 }
+
+const mapState = state => ({
+  users: state.users,
+  currentUser: state.auth.user,
+});
+
+const mapDispatch = dispatch => ({
+  load: dispatch.users.load,
+  loadRoles: dispatch.users.loadRoles,
+  setQuery: dispatch.users.setQuery,
+  openForm: dispatch.users.openForm,
+  clearMessages: dispatch.users.clearMessages,
+  clearCredentials: dispatch.users.clearCredentials,
+});
+
+export default connect(mapState, mapDispatch)(UsersPage);

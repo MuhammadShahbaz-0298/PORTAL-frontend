@@ -1,47 +1,25 @@
-/* Store root: Redux remains plain and feature reducers stay independently testable. */
-import { applyMiddleware, combineReducers, createStore } from "redux";
-import { thunk } from "redux-thunk";
-import { types } from "./actionTypes";
-import {
-  assignmentsReducer,
-  submissionsReducer,
-  batchesReducer,
-  attendanceReducer,
-  usersReducer,
-  rolesReducer,
-} from "./reducers/resources";
+/* Store root: every feature is one Rematch model. To add a feature, add its model here. */
+import { init } from "@rematch/core";
+import { auth } from "./models/auth";
+import { users } from "./models/users";
+import { dashboard } from "./models/dashboard";
+import { assignments } from "./models/assignments";
+import { submissions } from "./models/submissions";
+import { grading } from "./models/grading";
+import { attendance } from "./models/attendance";
+import { batches } from "./models/batches";
+import { roles } from "./models/roles";
 
-const authInitial = {
-  user: null,
-  loading: true,
-  error: null,
-};
-export const authReducer = (state = authInitial, action) => {
-  switch (action.type) {
-    case types.AUTH_REQUEST:
-      return { ...state, loading: true, error: null };
-    case types.AUTH_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        user: action.payload.user,
-        error: null,
-      };
-    case types.AUTH_FAILURE:
-      return { ...state, loading: false, error: action.payload };
-    case types.AUTH_LOGOUT:
-      return { ...state, loading: false, user: null, error: null };
-    default:
-      return state;
-  }
-};
-export const rootReducer = combineReducers({
-  auth: authReducer,
-  assignments: assignmentsReducer,
-  submissions: submissionsReducer,
-  batches: batchesReducer,
-  attendance: attendanceReducer,
-  users: usersReducer,
-  roles: rolesReducer,
+export const store = init({
+  models: {
+    auth,
+    users,
+    dashboard,
+    assignments,
+    submissions,
+    grading,
+    attendance,
+    batches,
+    roles,
+  },
 });
-export const store = createStore(rootReducer, applyMiddleware(thunk));
