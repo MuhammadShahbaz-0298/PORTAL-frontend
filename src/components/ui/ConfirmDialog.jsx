@@ -22,10 +22,11 @@ export async function confirmDialog({
       popup: "rounded-card font-sans",
       title: "text-lg font-semibold text-ink",
       htmlContainer: "text-sm text-muted",
+      actions: "gap-3",
       confirmButton:
-        "min-h-11 rounded-control bg-danger px-4 text-sm font-semibold text-white",
+        "m-0 min-h-11 rounded-control bg-danger px-4 text-sm font-semibold text-white",
       cancelButton:
-        "min-h-11 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink",
+        "m-0 min-h-11 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink",
     },
   });
 
