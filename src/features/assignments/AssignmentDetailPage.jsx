@@ -150,9 +150,17 @@ function AssignmentDetailPage({
           <h2 className="mt-1 font-sans text-xl font-semibold tracking-tight text-ink">
             {detail.title || "Untitled assignment"}
           </h2>
-          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-muted">
-            {detail.description || "No description has been provided."}
-          </p>
+          <section
+            aria-label="Description"
+            className="mt-4 rounded-control border border-line bg-canvas p-4"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Description
+            </p>
+            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 text-ink">
+              {detail.description || "No description has been provided."}
+            </p>
+          </section>
 
           <dl className="mt-6 grid gap-3 border-t border-line pt-5 sm:grid-cols-2">
             <div className="rounded-control bg-canvas p-3">
