@@ -5,7 +5,12 @@ import { apiError } from "../../api/client";
 import { toCollection } from "../../lib/apiData";
 import { listHelper } from "../../lib/listHelper";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const date = new Date();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+};
 const studentIdOf = record =>
   typeof record?.student === "object"
     ? record.student?._id || record.student?.id
@@ -262,6 +267,7 @@ export const attendance = {
               studentId: id,
               batchId: attendance.batchId,
               date: attendance.date,
+              timezoneOffset: new Date().getTimezoneOffset(),
               status,
             };
             if (isOnLeave) record.leaveReason = leaves[id];
