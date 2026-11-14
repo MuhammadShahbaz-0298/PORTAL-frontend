@@ -49,6 +49,7 @@ function AttendancePage({
         studentName(item.student),
         studentEmail(item.student),
         batchName(item.batch || item.batchName),
+        item.leaveReason,
       ]
         .filter(Boolean)
         .some(value => String(value).toLowerCase().includes(needle))
@@ -89,10 +90,20 @@ function AttendancePage({
       key: "status",
       label: "Status",
       render: record => (
-        <Badge tone={record.status === "present" ? "success" : "danger"}>
+        <Badge tone={record.status === "present" ? "success" : record.status === "leave" ? "warning" : "danger"}>
           {record.status || "absent"}
         </Badge>
       ),
+    },
+    {
+      key: "reason",
+      label: "Reason",
+      render: record => {
+        if (record.status === "leave") {
+          return record.leaveReason || "No reason recorded";
+        }
+        return "—";
+      },
     },
   ];
 
@@ -103,7 +114,7 @@ function AttendancePage({
         title="Attendance"
         description={
           student
-            ? "Review the days you were present and absent."
+            ? "Review the days you were present, absent, or on leave with a reason."
             : "Select a batch, then mark present students in one pass."
         }
         action={
@@ -152,7 +163,9 @@ function AttendancePage({
         }
       />
 
-      {canMark ? <MarkAttendanceModal studentId={studentId} /> : null}
+      {canMark ? (
+        <MarkAttendanceModal studentId={student ? studentId : undefined} />
+      ) : null}
     </div>
   );
 }

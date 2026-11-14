@@ -25,6 +25,7 @@ export const attendance = {
     date: "",
     roster: [],
     presentIds: [],
+    leaves: {},
     rosterLoading: false,
     rosterError: "",
     saving: false,
@@ -60,8 +61,8 @@ export const attendance = {
     setDate(state, date) {
       return { ...state, date };
     },
-    setRoster(state, { roster, presentIds }) {
-      return { ...state, roster, presentIds };
+    setRoster(state, { roster, presentIds, leaves }) {
+      return { ...state, roster, presentIds, leaves: leaves || {} };
     },
     setRosterLoading(state, rosterLoading) {
       return { ...state, rosterLoading };
@@ -119,32 +120,34 @@ export const attendance = {
       this.setModalOpen(true);
       this.setBatchId("");
       this.setDate(today());
-      this.setRoster({ roster: [], presentIds: [] });
+      this.setRoster({ roster: [], presentIds: [], leaves: {} });
       this.setRosterError("");
       this.setPageError("");
     },
 
-    closeForm() {
-      if (this.saving) return;
+    closeForm(_, rootState) {
+      if (rootState?.attendance?.saving) return;
       this.setModalOpen(false);
       this.setRosterError("");
     },
 
-    async selectBatch({ batchId }) {
+    async selectBatch({ batchId }, rootState) {
       this.setBatchId(batchId);
-      if (batchId && this.date) {
-        await this.loadChecklist({ batchId, date: this.date });
+      const attendance = rootState?.attendance || {};
+      if (batchId && attendance.date) {
+        await this.loadChecklist({ batchId, date: attendance.date });
       } else {
-        this.setRoster({ roster: [], presentIds: [] });
+        this.setRoster({ roster: [], presentIds: [], leaves: {} });
       }
     },
 
-    async selectDate({ date }) {
+    async selectDate({ date }, rootState) {
       this.setDate(date);
-      if (this.batchId && date) {
-        await this.loadChecklist({ batchId: this.batchId, date });
+      const attendance = rootState?.attendance || {};
+      if (attendance.batchId && date) {
+        await this.loadChecklist({ batchId: attendance.batchId, date });
       } else {
-        this.setRoster({ roster: [], presentIds: [] });
+        this.setRoster({ roster: [], presentIds: [], leaves: {} });
       }
     },
 
@@ -166,38 +169,77 @@ export const attendance = {
           .map(studentIdOf)
           .filter(Boolean);
 
-        this.setRoster({ roster, presentIds });
+        const leaves = {};
+        existing.forEach(record => {
+          if (record.status === "leave") {
+            leaves[studentIdOf(record)] = record.leaveReason || "";
+          }
+        });
+
+        this.setRoster({ roster, presentIds, leaves });
       } catch (error) {
         this.setRosterError(apiError(error));
-        this.setRoster({ roster: [], presentIds: [] });
+        this.setRoster({ roster: [], presentIds: [], leaves: {} });
       } finally {
         this.setRosterLoading(false);
       }
     },
 
-    togglePresent({ id }) {
-      const present = this.presentIds.some(
-        value => String(value) === String(id)
-      );
-      const presentIds = present
-        ? this.presentIds.filter(value => String(value) !== String(id))
-        : [...this.presentIds, id];
+    togglePresent({ id, leave, reason }, rootState) {
+      const attendance = rootState?.attendance || {};
+      const presentIds = attendance.presentIds || [];
+      const leaves = { ...(attendance.leaves || {}) };
+      const roster = attendance.roster || [];
+      let updatedPresentIds = presentIds;
 
-      this.setRoster({ roster: this.roster, presentIds });
+      if (reason !== undefined) {
+        leaves[id] = reason;
+      } else if (leave === true) {
+        if (leaves[id] !== undefined) {
+          delete leaves[id];
+        } else {
+          leaves[id] = "";
+          updatedPresentIds = presentIds.filter(
+            value => String(value) !== String(id)
+          );
+        }
+      } else {
+        const alreadyPresent = presentIds.some(
+          value => String(value) === String(id)
+        );
+        updatedPresentIds = alreadyPresent
+          ? presentIds.filter(value => String(value) !== String(id))
+          : [...presentIds, id];
+        delete leaves[id];
+      }
+
+      this.setRoster({ roster, presentIds: updatedPresentIds, leaves });
     },
 
-    async save({ studentId } = {}) {
-      if (!this.batchId) {
+    async save({ studentId } = {}, rootState) {
+      const attendance = rootState?.attendance || {};
+      const leaves = attendance.leaves || {};
+      const presentIds = attendance.presentIds || [];
+      const roster = attendance.roster || [];
+
+      if (!attendance.batchId) {
         this.setRosterError("Choose a batch before saving attendance.");
         return false;
       }
 
-      if (!this.roster.length) {
+      if (!roster.length) {
         this.setRosterError("This batch has no students to mark.");
         return false;
       }
 
-      const { batchId, date, roster, presentIds } = this;
+      const hasMissingReason = Object.values(leaves).some(
+        reason => typeof reason !== "string" || !reason.trim()
+      );
+      if (hasMissingReason) {
+        this.setRosterError("Add a reason for every student on leave.");
+        return false;
+      }
+
       this.setRosterError("");
       this.setSaving(true);
 
@@ -205,14 +247,25 @@ export const attendance = {
         await Promise.all(
           roster.map(student => {
             const id = student._id || student.id;
-            return markAttendance({
+            const isOnLeave = leaves[id] !== undefined;
+            const isPresent = presentIds.some(
+              value => String(value) === String(id)
+            );
+            let status = "absent";
+            if (isOnLeave) {
+              status = "leave";
+            } else if (isPresent) {
+              status = "present";
+            }
+
+            const record = {
               studentId: id,
-              batchId,
-              date,
-              status: presentIds.some(value => String(value) === String(id))
-                ? "present"
-                : "absent",
-            });
+              batchId: attendance.batchId,
+              date: attendance.date,
+              status,
+            };
+            if (isOnLeave) record.leaveReason = leaves[id];
+            return markAttendance(record);
           })
         );
 

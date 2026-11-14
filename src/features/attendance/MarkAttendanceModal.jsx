@@ -4,11 +4,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { CheckSquare, UsersRound } from "lucide-react";
 import Button from "../../components/ui/Button";
 import FormField from "../../components/ui/FormField";
-import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
+import Input from "../../components/ui/Input";
 import SearchSelect from "../../components/ui/SearchSelect";
 import Spinner from "../../components/ui/Spinner";
 import { studentEmail, studentIdOf } from "./attendanceUtils";
+import Textarea from "../../components/ui/Textarea";
 
 export default function MarkAttendanceModal({ studentId }) {
   const dispatch = useDispatch();
@@ -20,6 +21,7 @@ export default function MarkAttendanceModal({ studentId }) {
     date,
     roster,
     presentIds,
+    leaves,
     rosterLoading,
     rosterError,
     saving,
@@ -35,6 +37,7 @@ export default function MarkAttendanceModal({ studentId }) {
   );
 
   const presentCount = presentIds.length;
+  const leaveCount = Object.keys(leaves).length;
 
   const close = () => dispatch.attendance.closeForm();
 
@@ -77,6 +80,7 @@ export default function MarkAttendanceModal({ studentId }) {
             label="Batch"
             htmlFor="attendance-batch"
             required
+            className="content-start"
             hint={
               batchesLoading
                 ? "Loading batches…"
@@ -96,11 +100,17 @@ export default function MarkAttendanceModal({ studentId }) {
             />
           </FormField>
 
-          <FormField label="Date" htmlFor="attendance-date" required>
+          <FormField
+            label="Date"
+            htmlFor="attendance-date"
+            required
+            className="content-start"
+          >
             <Input
               id="attendance-date"
               type="date"
               value={date}
+              className="h-11"
               max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
                 .toISOString()
                 .slice(0, 10)}
@@ -118,7 +128,7 @@ export default function MarkAttendanceModal({ studentId }) {
               Students in the batch
             </p>
             <p className="text-xs text-muted">
-              {presentCount} of {roster.length} present
+              {presentCount} of {roster.length} present{leaveCount > 0 ? `, ${leaveCount} on leave` : ""}
             </p>
           </div>
 
@@ -138,37 +148,73 @@ export default function MarkAttendanceModal({ studentId }) {
                 const present = presentIds.some(
                   value => String(value) === String(id)
                 );
+                const onLeave = leaves[id] !== undefined;
+                const reason = leaves[id] || "";
 
                 return (
-                  <label
-                    key={id}
-                    className="flex min-h-14 cursor-pointer items-center gap-3 rounded-control border border-line bg-surface px-3 py-2 transition hover:bg-canvas"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={present}
-                      disabled={saving}
-                      onChange={() => dispatch.attendance.togglePresent({ id })}
-                      className="h-5 w-5 shrink-0 accent-brand"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium text-ink">
-                        {student.name || "Student"}
+                  <div key={id} className="grid gap-2">
+                    <div className="flex min-h-14 items-center gap-3 rounded-control border border-line bg-surface px-3 py-2 transition hover:bg-canvas">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={present && !onLeave}
+                          disabled={saving}
+                          onChange={() => dispatch.attendance.togglePresent({ id })}
+                          className="h-5 w-5 shrink-0 accent-brand"
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-ink">
+                            {student.name || "Student"}
+                          </span>
+                          <span className="block truncate text-xs text-muted">
+                            {studentEmail(student) || "No email on record"}
+                          </span>
+                        </span>
+                      </label>
+                      <Button
+                        variant="secondary"
+                        aria-pressed={onLeave}
+                        onClick={() => dispatch.attendance.togglePresent({ id, leave: true })}
+                        className="shrink-0"
+                        disabled={saving}
+                      >
+                        Leave
+                      </Button>
+                      <span
+                        className={
+                          onLeave
+                            ? "shrink-0 text-xs font-semibold text-warning"
+                            : present
+                              ? "shrink-0 text-xs font-semibold text-success"
+                              : "shrink-0 text-xs font-semibold text-muted"
+                        }
+                      >
+                        {onLeave ? "Leave" : present ? "Present" : "Absent"}
                       </span>
-                      <span className="block truncate text-xs text-muted">
-                        {studentEmail(student) || "No email on record"}
-                      </span>
-                    </span>
-                    <span
-                      className={
-                        present
-                          ? "shrink-0 text-xs font-semibold text-success"
-                          : "shrink-0 text-xs font-semibold text-muted"
-                      }
-                    >
-                      {present ? "Present" : "Absent"}
-                    </span>
-                  </label>
+                    </div>
+                    {onLeave && (
+                      <FormField
+                        label="Reason for leave"
+                        required
+                      >
+                        <Textarea
+                          value={reason}
+                          required
+                          invalid={rosterError === "Add a reason for every student on leave." && !reason.trim()}
+                          onChange={e =>
+                            dispatch.attendance.togglePresent({ id, reason: e.target.value })
+                          }
+                          disabled={saving}
+                          className="mt-1 block w-full min-h-[44px]"
+                        />
+                        {rosterError === "Add a reason for every student on leave." && !reason.trim() ? (
+                          <p role="alert" className="text-xs font-medium text-danger">
+                            {rosterError}
+                          </p>
+                        ) : null}
+                      </FormField>
+                    )}
+                  </div>
                 );
               })
             ) : (
@@ -182,7 +228,7 @@ export default function MarkAttendanceModal({ studentId }) {
                     : "Choose a batch to load its students."}
                 </p>
                 <p className="text-xs text-muted">
-                  Checked students are saved as present and the rest as absent.
+                  Checked students are saved as present, absent, or on leave with a reason.
                 </p>
               </div>
             )}

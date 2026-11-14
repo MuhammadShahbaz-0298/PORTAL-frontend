@@ -9,6 +9,7 @@ import {
 
 export default function AttendanceCard({ record }) {
   const present = record.status === "present";
+  const isLeave = record.status === "leave";
 
   return (
     <div className="grid gap-3">
@@ -21,7 +22,7 @@ export default function AttendanceCard({ record }) {
             {studentEmail(record.student) || "No email on record"}
           </p>
         </div>
-        <Badge tone={present ? "success" : "danger"}>
+        <Badge tone={present ? "success" : isLeave ? "warning" : "danger"}>
           {record.status || "absent"}
         </Badge>
       </div>
@@ -39,6 +40,14 @@ export default function AttendanceCard({ record }) {
             {formatDate(record.date)}
           </dd>
         </div>
+        {isLeave && (
+          <div className="rounded-control bg-canvas p-2.5">
+            <dt className="text-xs text-muted">Reason</dt>
+            <dd className="mt-0.5 whitespace-pre-wrap break-words font-medium text-ink">
+              {record.leaveReason || "No reason recorded"}
+            </dd>
+          </div>
+        )}
       </dl>
     </div>
   );

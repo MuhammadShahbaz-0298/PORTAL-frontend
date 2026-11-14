@@ -126,7 +126,7 @@ function DashboardPage({ user, data, loading, error, load }) {
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid gap-4">
         <Card>
           <div className="flex items-start justify-between gap-3 border-b border-line p-5">
             <div>
@@ -208,37 +208,6 @@ function DashboardPage({ user, data, loading, error, load }) {
               </p>
             </div>
           )}
-        </Card>
-
-        <Card>
-          <div className="border-b border-line p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
-              Shortcuts
-            </p>
-            <h2 className="mt-1 font-sans text-lg font-semibold text-ink">
-              Jump back in
-            </h2>
-          </div>
-          <ul className="grid gap-1 p-3">
-            {quickLinks.map(({ to, label, icon: Icon }) => (
-              <li key={to}>
-                <Link
-                  to={to}
-                  className="flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium text-ink transition hover:bg-canvas"
-                >
-                  <span className="grid h-8 w-8 place-items-center rounded-control bg-brand-soft text-brand">
-                    <Icon size={16} aria-hidden="true" />
-                  </span>
-                  {label}
-                  <ArrowUpRight
-                    size={15}
-                    aria-hidden="true"
-                    className="ml-auto text-muted"
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
         </Card>
       </div>
     </div>
