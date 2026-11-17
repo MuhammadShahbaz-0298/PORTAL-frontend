@@ -28,6 +28,10 @@ export const saveSubmissionFile = ({
     : uploadSubmission(assignmentId, file, onUploadProgress);
 export const gradeSubmission = (id, payload) =>
   client.patch(`/submissions/${id}/grade`, payload);
+// AI drafts are teacher/admin only; the client already adds the CSRF header.
+export const generateAiDraft = id => client.post(`/submissions/${id}/ai-draft`);
+export const discardAiDraft = id =>
+  client.patch(`/submissions/${id}/ai-draft/discard`);
 export const downloadSubmission = (id, onDownloadProgress) =>
   client.get(`/submissions/${id}/download`, {
     responseType: "blob",

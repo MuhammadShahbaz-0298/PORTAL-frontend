@@ -20,6 +20,7 @@ import PageHeader from "../../components/ui/PageHeader";
 import ProgressBar from "../../components/ui/ProgressBar";
 import Spinner from "../../components/ui/Spinner";
 import { buttonClassName } from "../../components/ui/Button";
+import { resubmissionPolicyLabel } from "./assignmentUtils";
 
 const formatDateTime = value => {
   if (!value) return "Not set";
@@ -111,10 +112,23 @@ function AssignmentDetailPage({
   const status = closed ? "Closed" : expired ? "Expired" : "Open";
   const openForSubmission = !closed && !expired;
   const batchName = detail.batch?.name || detail.batch || "Assigned batch";
+  const gradedSubmission = submission?.status === "graded";
+  const resubmissionOff = detail.resubmissionPolicy === "disabled";
+
+  // Why: hide the replacement form when the backend would refuse it anyway.
+  const canReplace =
+    !submission || (!resubmissionOff && !gradedSubmission);
+  const replaceBlockedReason = !submission
+    ? ""
+    : gradedSubmission
+      ? "This submission is already graded and can't be replaced."
+      : resubmissionOff
+        ? "Resubmissions are disabled for this assignment."
+        : "";
 
   const submit = async event => {
     event.preventDefault();
-    if (!file || !openForSubmission || uploading) return;
+    if (!file || !openForSubmission || !canReplace || uploading) return;
 
     const uploaded = await upload({
       assignmentId,
@@ -194,7 +208,7 @@ function AssignmentDetailPage({
                 Submission rule
               </dt>
               <dd className="mt-1 text-sm font-semibold text-ink">
-                One file · edit to replace
+                {resubmissionPolicyLabel(detail)}
               </dd>
             </div>
           </dl>
@@ -268,7 +282,13 @@ function AssignmentDetailPage({
               </div>
             ) : null}
 
-            {openForSubmission ? (
+            {openForSubmission && replaceBlockedReason ? (
+              <p className="mt-3 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-muted">
+                {replaceBlockedReason}
+              </p>
+            ) : null}
+
+            {openForSubmission && canReplace ? (
               <form onSubmit={submit} className="mt-4 grid gap-4">
                 <FormField
                   label={submission ? "Replacement ZIP file" : "ZIP file"}

@@ -8,7 +8,19 @@ import Modal from "../../components/ui/Modal";
 import SearchSelect from "../../components/ui/SearchSelect";
 import Textarea from "../../components/ui/Textarea";
 
-const EMPTY_FORM = { title: "", description: "", dueDate: "", batch: "" };
+const EMPTY_FORM = {
+  title: "",
+  description: "",
+  dueDate: "",
+  batch: "",
+  // Why: new assignments allow replacements unless the teacher says otherwise.
+  resubmissionPolicy: "allowed",
+};
+
+const POLICY_OPTIONS = [
+  { value: "allowed", label: "Allowed" },
+  { value: "disabled", label: "Not allowed" },
+];
 
 const toLocalInput = value => {
   if (!value) return "";
@@ -60,6 +72,7 @@ export default function AssignmentFormModal() {
       description: editing?.description || "",
       dueDate: toLocalInput(editing?.dueDate),
       batch: editing?.batch?._id || editing?.batch || "",
+      resubmissionPolicy: editing?.resubmissionPolicy || "allowed",
     });
     setErrors({});
   }, [formOpen, editing]);
@@ -87,6 +100,7 @@ export default function AssignmentFormModal() {
         description: form.description.trim(),
         dueDate: new Date(form.dueDate).toISOString(),
         batch: form.batch,
+        resubmissionPolicy: form.resubmissionPolicy,
       },
     });
   };
@@ -172,6 +186,21 @@ export default function AssignmentFormModal() {
           />
         </FormField>
 
+        <FormField
+          label="Allow students to replace their submission"
+          htmlFor="assignment-resubmission"
+          hint="Allowed lets a learner upload a replacement before the deadline."
+        >
+          <SearchSelect
+            id="assignment-resubmission"
+            aria-label="Allow students to replace their submission"
+            placeholder="Choose a policy"
+            options={POLICY_OPTIONS}
+            value={form.resubmissionPolicy}
+            onChange={value => update("resubmissionPolicy", value || "allowed")}
+          />
+        </FormField>
+
         {formError ? (
           <div
             role="alert"
@@ -182,8 +211,8 @@ export default function AssignmentFormModal() {
         ) : null}
 
         <p className="text-xs text-muted">
-          ZIP uploads are capped at 50 MB. Each student can submit once and edit
-          that submission before the deadline.
+          ZIP uploads are capped at 50 MB. Replacement uploads follow the policy
+          above.
         </p>
       </form>
     </Modal>

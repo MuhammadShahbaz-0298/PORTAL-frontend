@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import {
+  aiDraftBadge,
   assignmentName,
   formatDate,
   personEmail,
@@ -13,6 +14,7 @@ import {
 export default function GradingCard({ submission }) {
   const dispatch = useDispatch();
   const graded = submission.status === "graded";
+  const draftBadge = aiDraftBadge(submission);
 
   return (
     <div className="grid gap-3">
@@ -25,9 +27,14 @@ export default function GradingCard({ submission }) {
             {personEmail(submission.student) || "Student record"}
           </p>
         </div>
-        <Badge tone={graded ? "success" : "warning"}>
-          {submission.status || "submitted"}
-        </Badge>
+        <div className="flex flex-wrap items-center justify-end gap-1">
+          {draftBadge ? (
+            <Badge tone={draftBadge.tone}>{draftBadge.label}</Badge>
+          ) : null}
+          <Badge tone={graded ? "success" : "warning"}>
+            {submission.status || "submitted"}
+          </Badge>
+        </div>
       </div>
 
       <div className="rounded-control bg-canvas p-3">

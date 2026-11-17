@@ -19,3 +19,10 @@ export function normalizeAssignments(payload) {
   if (Array.isArray(payload)) return payload;
   return payload?.assignments || payload?.items || [];
 }
+
+/* New and older assignments without the field follow the backend default. */
+export function resubmissionPolicyLabel(assignment) {
+  return assignment?.resubmissionPolicy === "disabled"
+    ? "Replacements not allowed"
+    : "Replacements allowed";
+}

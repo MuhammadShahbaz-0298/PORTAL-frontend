@@ -11,6 +11,7 @@ import { classNames } from "../../lib/classNames";
 import GradingCard from "./GradingCard";
 import GradingModal from "./GradingModal";
 import {
+  aiDraftBadge,
   assignmentName,
   formatDate,
   personEmail,
@@ -80,11 +81,20 @@ function GradingPage({
     {
       key: "status",
       label: "Status",
-      render: submission => (
-        <Badge tone={submission.status === "graded" ? "success" : "warning"}>
-          {submission.status || "submitted"}
-        </Badge>
-      ),
+      render: submission => {
+        const draftBadge = aiDraftBadge(submission);
+
+        return (
+          <div className="flex flex-wrap items-center gap-1">
+            {draftBadge ? (
+              <Badge tone={draftBadge.tone}>{draftBadge.label}</Badge>
+            ) : null}
+            <Badge tone={submission.status === "graded" ? "success" : "warning"}>
+              {submission.status || "submitted"}
+            </Badge>
+          </div>
+        );
+      },
     },
     {
       key: "marks",

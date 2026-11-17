@@ -16,7 +16,6 @@ import { getProgressPercentage } from "../../lib/transferProgress";
 const ASSIGNMENT_DEFAULTS = {
   allowedFileTypes: ["zip"],
   maxFileSizeMb: 50,
-  resubmissionPolicy: "disabled",
 };
 
 export const assignments = {
