@@ -111,7 +111,12 @@ export default function AiDraftPanel({
         <div className="grid gap-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-ink">{NOTES.pending}</p>
-            <Button variant="secondary" onClick={onRefresh} loading={busy}>
+            <Button
+              variant="secondary"
+              onClick={onRefresh}
+              loading={busy}
+              className="shrink-0 whitespace-nowrap"
+            >
               Refresh
             </Button>
           </div>
@@ -124,7 +129,12 @@ export default function AiDraftPanel({
       {status === "failed" || status === "discarded" ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-ink">{NOTES[status]}</p>
-          <Button variant="secondary" onClick={onRegenerate} loading={busy}>
+          <Button
+            variant="secondary"
+            onClick={onRegenerate}
+            loading={busy}
+            className="shrink-0 whitespace-nowrap"
+          >
             Generate again
           </Button>
         </div>
