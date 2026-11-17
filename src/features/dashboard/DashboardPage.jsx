@@ -4,11 +4,7 @@ import { connect } from "react-redux";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUpRight,
-  CalendarCheck,
-  ClipboardList,
-  GraduationCap,
   Inbox,
-  UsersRound,
 } from "lucide-react";
 import Badge from "../../components/ui/Badge";
 import Card from "../../components/ui/Card";
@@ -72,16 +68,6 @@ function DashboardPage({ user, data, loading, error, load }) {
   );
 
   const queue = role === "student" ? openAssignments : awaiting;
-
-  const quickLinks = [
-    { to: "/assignments", label: "Open assignments", icon: ClipboardList },
-    staff
-      ? { to: "/grading", label: "Grading desk", icon: GraduationCap }
-      : { to: "/submissions", label: "Your submissions", icon: Inbox },
-    staff
-      ? { to: "/batches", label: "Teaching batches", icon: UsersRound }
-      : { to: "/attendance", label: "Your attendance", icon: CalendarCheck },
-  ];
 
   return (
     <div className="font-sans">

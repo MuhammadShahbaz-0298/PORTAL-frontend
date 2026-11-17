@@ -7,8 +7,8 @@ const NOTES = {
   pending: "Drafting... this can take a few minutes.",
   failed: "The draft could not be generated. You can try again.",
   discarded: "This draft was discarded. You can generate a new one.",
-  used: "Draft already applied. Edit the marks and feedback below as you like.",
-  edited: "Draft already applied. Edit the marks and feedback below as you like.",
+  applied:
+    "Draft already applied. Edit the marks and feedback below as you like.",
   stalled: "Still drafting. Press Refresh to check again.",
 };
 
@@ -131,7 +131,7 @@ export default function AiDraftPanel({
       ) : null}
 
       {status === "used" || status === "edited" ? (
-        <p className="text-sm text-muted">{NOTES[status]}</p>
+        <p className="text-sm text-muted">{NOTES.applied}</p>
       ) : null}
 
       {error ? (

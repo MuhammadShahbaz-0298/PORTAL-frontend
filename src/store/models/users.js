@@ -9,7 +9,7 @@ import {
 } from "../../api/users";
 import { listRoles } from "../../api/roles";
 import { apiError } from "../../api/client";
-import { listHelper } from "../../lib/listHelper";
+import { listHelper, loadList } from "../../lib/listHelper";
 
 // Why: crypto keeps generated passwords unpredictable and meets the backend
 // rule of at least one upper-case, lower-case, digit, and special character.
@@ -133,19 +133,7 @@ export const users = {
 
   effects: () => ({
     async load() {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listUsers();
-        const { items, total } = listHelper(response);
-        this.setLoaded({ items, total });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, listUsers);
     },
 
     async loadRoles() {

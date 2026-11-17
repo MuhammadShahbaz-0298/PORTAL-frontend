@@ -1,7 +1,6 @@
 /* SubmissionUploadModal: choose an open assignment and upload its ZIP archive. */
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Upload } from "lucide-react";
 import Button from "../../components/ui/Button";
 import FormField from "../../components/ui/FormField";
 import Modal from "../../components/ui/Modal";

@@ -6,15 +6,14 @@ import {
   listSubmissions,
 } from "../../api/submissions";
 import { apiError } from "../../api/client";
-import { listHelper } from "../../lib/listHelper";
+import { loadList, readList } from "../../lib/listHelper";
 
 const rowId = row => row?._id || row?.id;
 
 /* Re-read the queue without the loading flash and swap in the fresh row.
    Why: the queue is paged, so the row can be missing; the modal keeps what it has. */
 async function syncRow(model, id) {
-  const response = await listSubmissions();
-  const { items, total } = listHelper(response);
+  const { items, total } = await readList(() => listSubmissions());
   model.setLoaded({ items, total });
 
   const fresh = items.find(item => rowId(item) === id);
@@ -124,19 +123,7 @@ export const grading = {
 
   effects: () => ({
     async load() {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listSubmissions();
-        const { items, total } = listHelper(response);
-        this.setLoaded({ items, total });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, () => listSubmissions());
     },
 
     async save({ id, grade, feedback, wasGraded }) {
@@ -182,8 +169,7 @@ export const grading = {
     // Quiet poll for a pending draft: no loading flash, no busy spinner.
     async pollDraft({ id }) {
       try {
-        const response = await listSubmissions();
-        const { items, total } = listHelper(response);
+        const { items, total } = await readList(() => listSubmissions());
         this.setLoaded({ items, total });
 
         const fresh = items.find(item => rowId(item) === id);

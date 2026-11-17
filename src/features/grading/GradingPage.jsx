@@ -58,6 +58,12 @@ function GradingPage({
 
   const message = grading.pageError || grading.notice;
 
+  let emptyTitle = "No submissions yet";
+  if (grading.query) emptyTitle = "No matching records";
+  else if (grading.filter === "graded") emptyTitle = "No graded records";
+  else if (grading.filter === "needs-review")
+    emptyTitle = "No submissions need review";
+
   const columns = [
     {
       key: "learner",
@@ -198,15 +204,7 @@ function GradingPage({
         loading={grading.loading}
         error={grading.error}
         onRetry={() => load()}
-        emptyTitle={
-          grading.query
-            ? "No matching records"
-            : grading.filter === "graded"
-              ? "No graded records"
-              : grading.filter === "needs-review"
-                ? "No submissions need review"
-                : "No submissions yet"
-        }
+        emptyTitle={emptyTitle}
         emptyText="Submission records will appear here when learners upload their work."
       />
 

@@ -8,21 +8,19 @@ export function getAssignmentStatus(assignment, now = new Date()) {
   return "Active";
 }
 
-export function isAssignmentExpired(assignment, now = new Date()) {
-  return Boolean(
-    assignment?.dueDate &&
-    new Date(assignment.dueDate).getTime() <= now.getTime()
-  );
-}
-
-export function normalizeAssignments(payload) {
-  if (Array.isArray(payload)) return payload;
-  return payload?.assignments || payload?.items || [];
-}
-
 /* New and older assignments without the field follow the backend default. */
 export function resubmissionPolicyLabel(assignment) {
   return assignment?.resubmissionPolicy === "disabled"
     ? "Replacements not allowed"
     : "Replacements allowed";
+}
+
+export function formatDateTime(value) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }

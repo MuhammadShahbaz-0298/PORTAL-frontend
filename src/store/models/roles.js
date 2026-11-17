@@ -7,8 +7,7 @@ import {
   updateRole,
 } from "../../api/roles";
 import { apiError } from "../../api/client";
-import { toCollection } from "../../lib/apiData";
-import { listHelper } from "../../lib/listHelper";
+import { loadList } from "../../lib/listHelper";
 
 export const roles = {
   state: {
@@ -75,24 +74,7 @@ export const roles = {
 
   effects: () => ({
     async load() {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listRoles();
-        const raw = response.data?.roles || response.data;
-        const items = toCollection(raw);
-        const { total } = listHelper({
-          data: items,
-          headers: response.headers,
-        });
-        this.setLoaded({ items, total: total || items.length });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, listRoles);
     },
 
     async loadCatalog() {

@@ -17,8 +17,8 @@ Router, Axios, SweetAlert2 (confirm dialogs only) and Lucide icons.
 
 ```bash
 npm install
-copy env.local.template .env.local      # Windows
-# cp env.local.template .env.local      # macOS / Linux
+copy .env.example .env.local         # Windows
+# cp .env.example .env.local         # macOS / Linux
 npm run dev
 ```
 
@@ -35,7 +35,6 @@ browser, so never put a secret here.
 | ---------------- | -------- | --------------------------- | -------------------------------------------------------- |
 | `VITE_API_URL`   | yes      | `http://localhost:5000/api` | Backend address. `/api` is added if it is missing.       |
 | `VITE_APP_TITLE` | no       | `School Portal`             | Name shown in the sidebar and top bar.                   |
-| `VITE_APP_LOGO`  | no       | `/logo.svg`                 | Read by `src/config/env.js` but not used by the UI yet.  |
 
 ## Scripts
 
@@ -75,6 +74,12 @@ who have its permission.
 On phones the main pages sit in a bottom bar and the rest are under "More". On
 larger screens there is a left sidebar. Hiding a page is only a convenience. The
 backend decides what each person can really do.
+
+## AI suggestions when grading
+
+Teachers and admins may see an AI suggestion in the grading modal when the
+backend has one ready. It is only a suggestion: nothing is saved until you press
+Save grade, and you can discard it or ask for another.
 
 ## How the code is organised
 

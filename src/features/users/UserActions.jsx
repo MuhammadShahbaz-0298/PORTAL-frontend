@@ -22,6 +22,15 @@ export default function UserActions({ user, layout = "table" }) {
     .includes(String(id));
   const name = user.name || user.email || "this user";
   const active = user.active !== false;
+  let toggleLabel = "Activate";
+  let toggleTitle = "Activate";
+  if (archived) {
+    toggleLabel = "Restore";
+    toggleTitle = "Restore account";
+  } else if (active) {
+    toggleLabel = "Deactivate";
+    toggleTitle = "Deactivate";
+  }
 
   const askReset = async () => {
     const confirmed = await confirmDialog({
@@ -94,7 +103,7 @@ export default function UserActions({ user, layout = "table" }) {
           disabled={locked || isSelf}
         >
           <Power size={16} aria-hidden="true" />
-          {archived ? "Restore" : active ? "Deactivate" : "Activate"}
+          {toggleLabel}
         </Button>
         {!archived ? (
           <Button
@@ -160,9 +169,7 @@ export default function UserActions({ user, layout = "table" }) {
               ? `Deactivate ${name}`
               : `Activate ${name}`
         }
-        title={
-          archived ? "Restore account" : active ? "Deactivate" : "Activate"
-        }
+        title={toggleTitle}
         className={classNames(
           "grid h-11 w-11 place-items-center rounded-control text-muted transition",
           locked || isSelf

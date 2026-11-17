@@ -1,7 +1,7 @@
 /* Batches page: manage teaching cohorts, assigned teachers, and enrollment. */
 import { useEffect, useMemo } from "react";
 import { connect } from "react-redux";
-import { Inbox, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 // import EmptyState from "../../components/ui/EmptyState";

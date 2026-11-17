@@ -7,6 +7,15 @@ import UserActions from "./UserActions";
 export default function UserCard({ user }) {
   const archived = Boolean(user.archivedAt);
   const active = user.active !== false && !archived;
+  let statusTone = "danger";
+  let statusLabel = "Inactive";
+  if (archived) {
+    statusTone = "neutral";
+    statusLabel = "Archived";
+  } else if (active) {
+    statusTone = "success";
+    statusLabel = "Active";
+  }
 
   return (
     <div className="grid gap-3">
@@ -20,8 +29,8 @@ export default function UserCard({ user }) {
             <p className="truncate text-sm text-muted">{user.email}</p>
           </div>
         </div>
-        <Badge tone={archived ? "neutral" : active ? "success" : "danger"}>
-          {archived ? "Archived" : active ? "Active" : "Inactive"}
+        <Badge tone={statusTone}>
+          {statusLabel}
         </Badge>
       </div>
 

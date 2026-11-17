@@ -14,7 +14,3 @@ export default function Card({ className = "", children, ...props }) {
     </div>
   );
 }
-
-export function CardBody({ className = "", children }) {
-  return <div className={classNames("p-4 sm:p-6", className)}>{children}</div>;
-}

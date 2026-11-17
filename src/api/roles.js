@@ -6,5 +6,3 @@ export const updateRole = (id, payload) =>
   client.patch(`/roles/${id}`, payload);
 export const deleteRole = id => client.delete(`/roles/${id}`);
 export const getPermissionCatalog = () => client.get("/permissions");
-export const updateUserPermissions = (id, payload) =>
-  client.patch(`/permissions/users/${id}`, payload);

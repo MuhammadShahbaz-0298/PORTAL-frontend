@@ -7,7 +7,7 @@ import {
 import { listAssignments } from "../../api/assignments";
 import { apiError } from "../../api/client";
 import { toCollection } from "../../lib/apiData";
-import { listHelper } from "../../lib/listHelper";
+import { loadList } from "../../lib/listHelper";
 import { getProgressPercentage } from "../../lib/transferProgress";
 
 export const submissions = {
@@ -87,19 +87,7 @@ export const submissions = {
 
   effects: () => ({
     async load() {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listSubmissions();
-        const { items, total } = listHelper(response);
-        this.setLoaded({ items, total });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, () => listSubmissions());
     },
 
     async loadAssignments() {

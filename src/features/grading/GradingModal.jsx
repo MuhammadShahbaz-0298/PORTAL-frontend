@@ -9,10 +9,10 @@ import Modal from "../../components/ui/Modal";
 import Textarea from "../../components/ui/Textarea";
 import AiDraftPanel from "./AiDraftPanel";
 import { assignmentName, draftMarks, personName } from "./gradingUtils";
-
-// How often a running draft is checked, and when we stop waiting for it.
-const POLL_MS = 5000;
-const POLL_TIMEOUT_MS = 3 * 60 * 1000;
+import {
+  DRAFT_POLL_INTERVAL_MS,
+  DRAFT_POLL_TIMEOUT_MS,
+} from "../../constants/app";
 
 function validate(form) {
   const errors = {};
@@ -66,13 +66,13 @@ export default function GradingModal() {
 
     const interval = setInterval(() => {
       dispatch.grading.pollDraft({ id: editingId });
-    }, POLL_MS);
+    }, DRAFT_POLL_INTERVAL_MS);
 
     // Why: stop waiting after three minutes; Refresh is still there.
     const timeout = setTimeout(() => {
       clearInterval(interval);
       setPollTimedOut(true);
-    }, POLL_TIMEOUT_MS);
+    }, DRAFT_POLL_TIMEOUT_MS);
 
     return () => {
       clearInterval(interval);

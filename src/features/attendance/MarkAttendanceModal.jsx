@@ -150,6 +150,9 @@ export default function MarkAttendanceModal({ studentId }) {
                 );
                 const onLeave = leaves[id] !== undefined;
                 const reason = leaves[id] || "";
+                let stateLabel = "Absent";
+                if (onLeave) stateLabel = "Leave";
+                else if (present) stateLabel = "Present";
 
                 return (
                   <div key={id} className="grid gap-2">
@@ -189,7 +192,7 @@ export default function MarkAttendanceModal({ studentId }) {
                               : "shrink-0 text-xs font-semibold text-muted"
                         }
                       >
-                        {onLeave ? "Leave" : present ? "Present" : "Absent"}
+                        {stateLabel}
                       </span>
                     </div>
                     {onLeave && (

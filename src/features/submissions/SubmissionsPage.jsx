@@ -125,7 +125,7 @@ function SubmissionsPage({
       key: "action",
       label: "Action",
       className: "text-right",
-      render: submission =>
+      render: () =>
         student ? null : (
           <Link
             to="/grading"

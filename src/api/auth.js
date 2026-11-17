@@ -7,4 +7,3 @@ export const changePassword = payload =>
   client.post("/auth/change-password", payload);
 export const refresh = () => client.post("/auth/refresh");
 export const logoutSession = () => client.post("/auth/logout");
-export const logoutAll = () => client.post("/auth/logout-all");

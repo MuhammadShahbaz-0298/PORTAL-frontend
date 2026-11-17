@@ -20,7 +20,3 @@ export function toCollection(payload) {
     return toCollection(payload.data);
   return [];
 }
-
-export function responseError(payload) {
-  return payload?.error || payload?.message || "";
-}

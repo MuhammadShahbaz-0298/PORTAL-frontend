@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { classNames } from "../../lib/classNames";
+import { TOAST_DURATION_MS } from "../../constants/app";
 
 const TONES = {
   neutral: "bg-surface text-ink",
@@ -21,7 +22,7 @@ export default function Toast({
   useEffect(() => {
     if (!title && !message) return undefined;
 
-    const timer = setTimeout(() => onClose?.(), 5000);
+    const timer = setTimeout(() => onClose?.(), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
   }, [title, message, onClose]);
 

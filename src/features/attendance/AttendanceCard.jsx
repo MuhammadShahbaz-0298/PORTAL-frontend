@@ -10,6 +10,9 @@ import {
 export default function AttendanceCard({ record }) {
   const present = record.status === "present";
   const isLeave = record.status === "leave";
+  let tone = "danger";
+  if (present) tone = "success";
+  else if (isLeave) tone = "warning";
 
   return (
     <div className="grid gap-3">
@@ -22,7 +25,7 @@ export default function AttendanceCard({ record }) {
             {studentEmail(record.student) || "No email on record"}
           </p>
         </div>
-        <Badge tone={present ? "success" : isLeave ? "warning" : "danger"}>
+        <Badge tone={tone}>
           {record.status || "absent"}
         </Badge>
       </div>

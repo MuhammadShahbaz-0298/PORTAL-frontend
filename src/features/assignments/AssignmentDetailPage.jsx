@@ -1,36 +1,17 @@
 /* Assignment detail page: the brief plus the student's single editable submission. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { connect } from "react-redux";
 import { Link, useParams } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  CalendarClock,
-  Edit3,
-  FileArchive,
-  FolderOpen,
-  Inbox,
-  Upload,
-} from "lucide-react";
+import { ArrowLeft, Inbox } from "lucide-react";
 import Badge from "../../components/ui/Badge";
-import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import ErrorState from "../../components/ui/ErrorState";
-import FormField from "../../components/ui/FormField";
 import PageHeader from "../../components/ui/PageHeader";
-import ProgressBar from "../../components/ui/ProgressBar";
 import Spinner from "../../components/ui/Spinner";
 import { buttonClassName } from "../../components/ui/Button";
-import { resubmissionPolicyLabel } from "./assignmentUtils";
-
-const formatDateTime = value => {
-  if (!value) return "Not set";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Not set";
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
-};
+import AssignmentBriefCard from "./AssignmentBriefCard";
+import StudentSubmissionCard from "./StudentSubmissionCard";
+import { formatDateTime } from "./assignmentUtils";
 
 const isExpired = assignment =>
   Boolean(
@@ -56,8 +37,6 @@ function AssignmentDetailPage({
     from: "/protected/assignments/$assignmentId",
   });
   const student = user?.role === "student";
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef(null);
 
   // One mount effect: read the brief (and this student's submission), reset on exit.
   useEffect(() => {
@@ -109,38 +88,22 @@ function AssignmentDetailPage({
 
   const expired = isExpired(detail);
   const closed = detail.active === false;
-  const status = closed ? "Closed" : expired ? "Expired" : "Open";
+  let status = "Open";
+  if (closed) status = "Closed";
+  else if (expired) status = "Expired";
   const openForSubmission = !closed && !expired;
-  const batchName = detail.batch?.name || detail.batch || "Assigned batch";
   const gradedSubmission = submission?.status === "graded";
   const resubmissionOff = detail.resubmissionPolicy === "disabled";
 
   // Why: hide the replacement form when the backend would refuse it anyway.
-  const canReplace =
-    !submission || (!resubmissionOff && !gradedSubmission);
-  const replaceBlockedReason = !submission
-    ? ""
-    : gradedSubmission
-      ? "This submission is already graded and can't be replaced."
-      : resubmissionOff
-        ? "Resubmissions are disabled for this assignment."
-        : "";
-
-  const submit = async event => {
-    event.preventDefault();
-    if (!file || !openForSubmission || !canReplace || uploading) return;
-
-    const uploaded = await upload({
-      assignmentId,
-      submissionId: submission?._id || submission?.id,
-      file,
-    });
-
-    if (uploaded) {
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
+  const canReplace = !submission || (!resubmissionOff && !gradedSubmission);
+  let replaceBlockedReason = "";
+  if (submission && gradedSubmission) {
+    replaceBlockedReason =
+      "This submission is already graded and can't be replaced.";
+  } else if (submission && resubmissionOff) {
+    replaceBlockedReason = "Resubmissions are disabled for this assignment.";
+  }
 
   return (
     <div className="font-sans">
@@ -157,180 +120,23 @@ function AssignmentDetailPage({
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card className="p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
-            The brief
-          </p>
-          <h2 className="mt-1 font-sans text-xl font-semibold tracking-tight text-ink">
-            {detail.title || "Untitled assignment"}
-          </h2>
-          <section
-            aria-label="Description"
-            className="mt-4 rounded-control border border-line bg-canvas p-4"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-              Description
-            </p>
-            <p className="mt-2 whitespace-pre-wrap break-words text-[13px] leading-6 text-ink">
-              {detail.description || "No description has been provided."}
-            </p>
-          </section>
-
-          <dl className="mt-6 grid gap-3 border-t border-line pt-5 sm:grid-cols-2">
-            <div className="rounded-control bg-canvas p-3">
-              <dt className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <FolderOpen size={14} aria-hidden="true" />
-                Batch
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-ink">
-                {batchName}
-              </dd>
-            </div>
-            <div className="rounded-control bg-canvas p-3">
-              <dt className="flex items-center gap-1.5 text-xs font-medium text-muted">
-                <CalendarClock size={14} aria-hidden="true" />
-                Deadline
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-ink">
-                {formatDateTime(detail.dueDate)}
-              </dd>
-            </div>
-            <div className="rounded-control bg-canvas p-3">
-              <dt className="text-xs font-medium text-muted">Status</dt>
-              <dd className="mt-1">
-                <Badge tone={status === "Open" ? "success" : "danger"}>
-                  {status}
-                </Badge>
-              </dd>
-            </div>
-            <div className="rounded-control bg-canvas p-3">
-              <dt className="text-xs font-medium text-muted">
-                Submission rule
-              </dt>
-              <dd className="mt-1 text-sm font-semibold text-ink">
-                {resubmissionPolicyLabel(detail)}
-              </dd>
-            </div>
-          </dl>
-        </Card>
+        <AssignmentBriefCard assignment={detail} status={status} />
 
         {student ? (
-          <Card className="p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
-              Your submission
-            </p>
-            <h2 className="mt-1 font-sans text-lg font-semibold text-ink">
-              {submission ? "Edit submission" : "Upload archive"}
-            </h2>
-
-            {submission ? (
-              <div className="mt-3 rounded-control border border-line bg-canvas p-3">
-                <p className="flex items-center gap-2 text-sm font-semibold text-ink">
-                  <FileArchive size={16} aria-hidden="true" />
-                  {submission.fileName || "Submitted file"}
-                </p>
-                <p className="mt-1 text-xs text-muted">
-                  Submitted {formatDateTime(submission.submittedAt)}
-                </p>
-                {submission.status === "graded" ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Badge tone="success">Graded</Badge>
-                    <span className="text-sm font-semibold text-ink">
-                      {submission.grade ?? "—"}
-                    </span>
-                  </div>
-                ) : null}
-                {submission.feedback ? (
-                  <p className="mt-2 text-xs leading-5 text-muted">
-                    {submission.feedback}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-
-            {!openForSubmission ? (
-              <div
-                role="status"
-                className="mt-3 rounded-control border border-warning/30 bg-warning-soft px-3 py-2 text-sm font-medium text-warning"
-              >
-                This assignment is {status.toLowerCase()}; new uploads and edits
-                are closed.
-              </div>
-            ) : null}
-
-            {submissionError ? (
-              <div
-                role="alert"
-                className="mt-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm font-medium text-danger"
-              >
-                {submissionError}
-              </div>
-            ) : null}
-            {submissionNotice ? (
-              <div
-                role="status"
-                className="mt-3 rounded-control border border-success/30 bg-success-soft px-3 py-2 text-sm font-medium text-success"
-              >
-                {submissionNotice}
-                <button
-                  type="button"
-                  onClick={clearDetailMessages}
-                  className="ml-2 text-xs font-semibold underline"
-                >
-                  Dismiss
-                </button>
-              </div>
-            ) : null}
-
-            {openForSubmission && replaceBlockedReason ? (
-              <p className="mt-3 rounded-control border border-line bg-canvas px-3 py-2 text-sm text-muted">
-                {replaceBlockedReason}
-              </p>
-            ) : null}
-
-            {openForSubmission && canReplace ? (
-              <form onSubmit={submit} className="mt-4 grid gap-4">
-                <FormField
-                  label={submission ? "Replacement ZIP file" : "ZIP file"}
-                  htmlFor="submission-file"
-                  hint="One ZIP archive, up to 50 MB."
-                >
-                  <input
-                    ref={fileInputRef}
-                    id="submission-file"
-                    type="file"
-                    accept=".zip,application/zip"
-                    disabled={uploading}
-                    onChange={event => setFile(event.target.files?.[0] || null)}
-                    className="block w-full text-sm text-muted file:mr-3 file:min-h-11 file:rounded-control file:border-0 file:bg-brand-soft file:px-4 file:text-sm file:font-semibold file:text-brand"
-                  />
-                </FormField>
-
-                {uploading ? (
-                  <ProgressBar
-                    value={uploadProgress}
-                    label="Uploading submission"
-                    valueLabel="%"
-                    completedLabel="Processing submission…"
-                  />
-                ) : null}
-
-                <Button
-                  type="submit"
-                  loading={uploading}
-                  disabled={!file}
-                  className="justify-self-start"
-                >
-                  {submission ? (
-                    <Edit3 size={16} aria-hidden="true" />
-                  ) : (
-                    <Upload size={16} aria-hidden="true" />
-                  )}
-                  {submission ? "Edit submission" : "Upload submission"}
-                </Button>
-              </form>
-            ) : null}
-          </Card>
+          <StudentSubmissionCard
+            assignmentId={assignmentId}
+            submission={submission}
+            status={status}
+            openForSubmission={openForSubmission}
+            canReplace={canReplace}
+            replaceBlockedReason={replaceBlockedReason}
+            notice={submissionNotice}
+            error={submissionError}
+            uploading={uploading}
+            uploadProgress={uploadProgress}
+            onUpload={upload}
+            onClearMessages={clearDetailMessages}
+          />
         ) : (
           <Card className="p-5 sm:p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">

@@ -89,11 +89,17 @@ function AttendancePage({
     {
       key: "status",
       label: "Status",
-      render: record => (
-        <Badge tone={record.status === "present" ? "success" : record.status === "leave" ? "warning" : "danger"}>
-          {record.status || "absent"}
-        </Badge>
-      ),
+      render: record => {
+        let tone = "danger";
+        if (record.status === "present") tone = "success";
+        else if (record.status === "leave") tone = "warning";
+
+        return (
+          <Badge tone={tone}>
+            {record.status || "absent"}
+          </Badge>
+        );
+      },
     },
     {
       key: "reason",

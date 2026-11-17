@@ -3,7 +3,7 @@ import { listAttendance, markAttendance } from "../../api/attendance";
 import { listBatches, listBatchStudents } from "../../api/batches";
 import { apiError } from "../../api/client";
 import { toCollection } from "../../lib/apiData";
-import { listHelper } from "../../lib/listHelper";
+import { loadList } from "../../lib/listHelper";
 
 const today = () => {
   const date = new Date();
@@ -91,21 +91,9 @@ export const attendance = {
 
   effects: () => ({
     async load({ studentId } = {}) {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listAttendance(
-          studentId ? { studentId } : undefined
-        );
-        const { items, total } = listHelper(response);
-        this.setLoaded({ items, total });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, () =>
+        listAttendance(studentId ? { studentId } : undefined)
+      );
     },
 
     async loadBatches() {

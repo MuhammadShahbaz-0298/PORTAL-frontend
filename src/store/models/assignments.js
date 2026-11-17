@@ -10,7 +10,7 @@ import { listBatches } from "../../api/batches";
 import { listSubmissions, saveSubmissionFile } from "../../api/submissions";
 import { apiError } from "../../api/client";
 import { toCollection } from "../../lib/apiData";
-import { listHelper } from "../../lib/listHelper";
+import { loadList } from "../../lib/listHelper";
 import { getProgressPercentage } from "../../lib/transferProgress";
 
 const ASSIGNMENT_DEFAULTS = {
@@ -127,19 +127,7 @@ export const assignments = {
 
   effects: () => ({
     async load() {
-      this.setLoading(true);
-      this.setError("");
-      try {
-        const response = await listAssignments();
-        const { items, total } = listHelper(response);
-        this.setLoaded({ items, total });
-        return items;
-      } catch (error) {
-        this.setError(apiError(error));
-        return [];
-      } finally {
-        this.setLoading(false);
-      }
+      return loadList(this, listAssignments);
     },
 
     async loadBatches() {
