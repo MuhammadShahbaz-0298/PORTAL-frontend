@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { ShieldAlert } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
+import ChatWidget from "../ChatWidget";
 import BottomNav from "./BottomNav";
 import MoreSheet from "./MoreSheet";
 import routesConfig from "../../routes-config";
@@ -20,6 +21,7 @@ export default function AppLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { user, loading } = useSelector(state => state.auth);
   const location = useLocation();
+  const isQuizAttemptPage = /^\/quizzes\/[^/]+$/.test(location.pathname);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const inactivityTimerRef = useRef(null);
@@ -148,22 +150,27 @@ export default function AppLayout() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <Sidebar />
+      {!isQuizAttemptPage ? <Sidebar /> : null}
 
-      <div className="md:pl-64">
-        <Topbar />
+      <div className={isQuizAttemptPage ? "" : "md:pl-64"}>
+        {!isQuizAttemptPage ? <Topbar /> : null}
         <main
           className={classNames(
             "mx-auto w-full max-w-content px-4 pt-5 sm:px-6 md:pt-8 lg:px-8",
-            MOBILE_CONTENT_CLEARANCE_CLASS
+            !isQuizAttemptPage && MOBILE_CONTENT_CLEARANCE_CLASS
           )}
         >
           <Outlet />
         </main>
       </div>
 
-      <BottomNav open={moreOpen} onOpenMore={() => setMoreOpen(true)} />
-      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+      {!isQuizAttemptPage ? (
+        <>
+          <BottomNav open={moreOpen} onOpenMore={() => setMoreOpen(true)} />
+          <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+          <ChatWidget />
+        </>
+      ) : null}
     </div>
   );
 }

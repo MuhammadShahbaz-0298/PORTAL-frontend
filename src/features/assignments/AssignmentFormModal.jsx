@@ -7,13 +7,14 @@ import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 import SearchSelect from "../../components/ui/SearchSelect";
 import Textarea from "../../components/ui/Textarea";
+import ResourceList from "./ResourceList";
+import ResourceUploader from "./ResourceUploader";
 
 const EMPTY_FORM = {
   title: "",
   description: "",
   dueDate: "",
   batch: "",
-  // Why: new assignments allow replacements unless the teacher says otherwise.
   resubmissionPolicy: "allowed",
 };
 
@@ -44,11 +45,14 @@ function validate(form) {
 
 export default function AssignmentFormModal() {
   const dispatch = useDispatch();
-  const { formOpen, editing, formError, saving, batches } = useSelector(
-    state => state.assignments
-  );
+  const { formOpen, editing, formError, saving, batches, uploading } =
+    useSelector(state => state.assignments);
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileResults, setFileResults] = useState([]);
+  const [completed, setCompleted] = useState(false);
+  const editingId = editing?._id || editing?.id || "";
 
   const batchOptions = useMemo(
     () =>
@@ -59,11 +63,13 @@ export default function AssignmentFormModal() {
     [batches]
   );
 
-  // Why: the modal opens empty for a new brief and prefilled when editing.
   useEffect(() => {
     if (!formOpen) {
       setForm(EMPTY_FORM);
       setErrors({});
+      setSelectedFiles([]);
+      setFileResults([]);
+      setCompleted(false);
       return;
     }
 
@@ -75,7 +81,11 @@ export default function AssignmentFormModal() {
       resubmissionPolicy: editing?.resubmissionPolicy || "allowed",
     });
     setErrors({});
-  }, [formOpen, editing]);
+    setSelectedFiles([]);
+    setFileResults([]);
+    setCompleted(false);
+    if (editingId) dispatch.assignmentResources.load({ assignmentId: editingId });
+  }, [formOpen, editing, editingId, dispatch]);
 
   const update = (field, value) => {
     setForm(current => ({ ...current, [field]: value }));
@@ -84,17 +94,21 @@ export default function AssignmentFormModal() {
   };
 
   const close = () => {
-    if (!saving) dispatch.assignments.closeForm();
+    if (!saving && !uploading) dispatch.assignments.closeForm();
   };
 
   const submit = async event => {
     event.preventDefault();
+    if (completed) {
+      close();
+      return;
+    }
     const nextErrors = validate(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
 
-    await dispatch.assignments.save({
-      id: editing?._id || editing?.id,
+    const result = await dispatch.assignments.save({
+      id: editingId,
       values: {
         title: form.title.trim(),
         description: form.description.trim(),
@@ -102,7 +116,41 @@ export default function AssignmentFormModal() {
         batch: form.batch,
         resubmissionPolicy: form.resubmissionPolicy,
       },
+      keepOpen: !editingId && selectedFiles.length > 0,
     });
+
+    if (!result || editingId || !selectedFiles.length) return;
+
+    const assignmentId = typeof result === "string" ? result : result?.data?._id;
+    if (!assignmentId) return;
+    setCompleted(true);
+    const initial = selectedFiles.map(file => ({
+      name: file.name,
+      status: "Uploading…",
+      error: false,
+    }));
+    setFileResults(initial);
+
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      const file = selectedFiles[index];
+      const uploaded = await dispatch.assignmentResources.upload({
+        assignmentId,
+        file,
+      });
+      setFileResults(current =>
+        current.map((item, position) =>
+          position === index
+            ? {
+                ...item,
+                status: uploaded
+                  ? "Uploaded successfully."
+                  : "Upload failed. Try again from the assignment detail page.",
+                error: !uploaded,
+              }
+            : item
+        )
+      );
+    }
   };
 
   return (
@@ -112,11 +160,15 @@ export default function AssignmentFormModal() {
       title={editing ? "Edit assignment" : "Create assignment"}
       footer={
         <>
-          <Button variant="secondary" onClick={close} disabled={saving}>
-            Cancel
+          <Button variant="secondary" onClick={close} disabled={saving || uploading}>
+            {completed ? "Close" : "Cancel"}
           </Button>
-          <Button type="submit" form="assignment-form" loading={saving}>
-            {editing ? "Save changes" : "Create assignment"}
+          <Button type="submit" form="assignment-form" loading={saving || uploading}>
+            {completed
+              ? "Done"
+              : editing
+                ? "Save changes"
+                : "Create assignment"}
           </Button>
         </>
       }
@@ -200,6 +252,65 @@ export default function AssignmentFormModal() {
             onChange={value => update("resubmissionPolicy", value || "allowed")}
           />
         </FormField>
+
+        <fieldset className="rounded-control border border-line p-3">
+          <legend className="px-1 text-sm font-semibold text-ink">
+            Attachments
+          </legend>
+          <ResourceUploader
+            assignmentId={editingId}
+            selectedFiles={selectedFiles}
+            onFilesChange={
+              editingId ? undefined : files => setSelectedFiles(files)
+            }
+            disabled={completed}
+          />
+
+          {editingId ? (
+            <div className="mt-4">
+              <ResourceList assignmentId={editingId} canManage />
+            </div>
+          ) : null}
+
+          {!editingId && selectedFiles.length ? (
+            <ul className="mt-3 grid gap-1">
+              {selectedFiles.map((file, index) => (
+                <li
+                  key={`${file.name}-${index}`}
+                  className="flex items-center justify-between gap-3 text-sm"
+                >
+                  <span className="min-w-0 truncate text-ink">{file.name}</span>
+                  <button
+                    type="button"
+                    disabled={completed}
+                    onClick={() =>
+                      setSelectedFiles(current =>
+                        current.filter((_, position) => position !== index)
+                      )
+                    }
+                    className="shrink-0 text-xs font-semibold text-brand hover:underline disabled:opacity-50"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {fileResults.length ? (
+            <ul className="mt-3 grid gap-1 border-t border-line pt-3">
+              {fileResults.map((result, index) => (
+                <li
+                  key={`${result.name}-${index}`}
+                  role={result.error ? "alert" : "status"}
+                  className={`text-sm ${result.error ? "text-danger" : "text-success"}`}
+                >
+                  {result.name}: {result.status}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </fieldset>
 
         {formError ? (
           <div

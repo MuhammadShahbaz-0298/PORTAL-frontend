@@ -4,6 +4,8 @@ import {
   archiveBatch,
   deleteBatch,
   enrollStudent,
+  unenrollStudent,
+  listEligibleBatchStudents,
   listBatchStudents,
   listBatches,
   updateBatch,
@@ -24,6 +26,7 @@ export const batches = {
     query: "",
     teachers: [],
     students: [],
+    eligibleStudents: [],
     peopleLoading: false,
     formOpen: false,
     editing: null,
@@ -33,7 +36,9 @@ export const batches = {
     enrollBatch: null,
     enrolled: [],
     enrolledLoading: false,
+    eligibleLoading: false,
     enrollError: "",
+    enrollNotice: "",
     enrolling: false,
     pendingId: null,
     notice: "",
@@ -58,6 +63,9 @@ export const batches = {
     },
     setStudents(state, students) {
       return { ...state, students };
+    },
+    setEligibleStudents(state, eligibleStudents) {
+      return { ...state, eligibleStudents };
     },
     setPeopleLoading(state, peopleLoading) {
       return { ...state, peopleLoading };
@@ -86,8 +94,14 @@ export const batches = {
     setEnrolledLoading(state, enrolledLoading) {
       return { ...state, enrolledLoading };
     },
+    setEligibleLoading(state, eligibleLoading) {
+      return { ...state, eligibleLoading };
+    },
     setEnrollError(state, enrollError) {
       return { ...state, enrollError };
+    },
+    setEnrollNotice(state, enrollNotice) {
+      return { ...state, enrollNotice };
     },
     setEnrolling(state, enrolling) {
       return { ...state, enrolling };
@@ -204,43 +218,68 @@ export const batches = {
       this.setEnrollBatch(batch);
       this.setEnrollOpen(true);
       this.setEnrollError("");
+      this.setEnrollNotice("");
       this.setEnrolled([]);
+      this.setEligibleStudents([]);
       this.setEnrolledLoading(true);
+      this.setEligibleLoading(true);
 
       try {
-        const response = await listBatchStudents(idOf(batch));
-        this.setEnrolled(toCollection(response.data));
+        const [enrolledResponse, eligibleResponse] = await Promise.all([
+          listBatchStudents(idOf(batch)),
+          listEligibleBatchStudents(idOf(batch)),
+        ]);
+        this.setEnrolled(toCollection(enrolledResponse.data));
+        this.setEligibleStudents(toCollection(eligibleResponse.data));
       } catch (error) {
         this.setEnrollError(apiError(error));
       } finally {
         this.setEnrolledLoading(false);
+        this.setEligibleLoading(false);
       }
     },
 
-    closeEnroll() {
-      if (this.enrolling) return;
+    closeEnroll(_payload, rootState) {
+      if (rootState?.batches?.enrolling || rootState?.batches?.pendingId)
+        return;
       this.setEnrollOpen(false);
       this.setEnrollBatch(null);
       this.setEnrolled([]);
+      this.setEligibleStudents([]);
       this.setEnrollError("");
+      this.setEnrollNotice("");
     },
 
-    async enroll({ studentId }) {
+    async enroll({ studentId }, rootState) {
       if (!studentId) {
         this.setEnrollError("Choose a student before enrolling.");
         return false;
       }
 
-      const batchId = idOf(this.enrollBatch);
-      if (!batchId) return false;
+      const batchId = idOf(rootState?.batches?.enrollBatch);
+      if (!batchId) {
+        this.setEnrollError("Choose a batch before enrolling.");
+        return false;
+      }
 
       this.setEnrollError("");
+      this.setEnrollNotice("");
       this.setEnrolling(true);
 
       try {
         await enrollStudent(batchId, studentId);
-        const response = await listBatchStudents(batchId);
-        this.setEnrolled(toCollection(response.data));
+        const { enrolled = [], eligibleStudents = [] } =
+          rootState.batches || {};
+        const student = eligibleStudents.find(
+          item => String(idOf(item)) === String(studentId)
+        );
+        if (student) this.setEnrolled([...enrolled, student]);
+        this.setEligibleStudents(
+          eligibleStudents.filter(
+            item => String(idOf(item)) !== String(studentId)
+          )
+        );
+        this.setEnrollNotice("Student enrolled successfully.");
         this.setNotice("Student enrolled successfully.");
         await this.load();
         return true;
@@ -249,6 +288,44 @@ export const batches = {
         return false;
       } finally {
         this.setEnrolling(false);
+      }
+    },
+
+    async removeStudent({ studentId }, rootState) {
+      const batch = rootState?.batches?.enrollBatch;
+      const batchId = idOf(batch);
+      if (!batchId || !studentId) {
+        this.setEnrollError(
+          "Choose a student and batch before removing enrollment."
+        );
+        return false;
+      }
+
+      this.setEnrollError("");
+      this.setEnrollNotice("");
+      this.setPendingId(studentId);
+      try {
+        await unenrollStudent(batchId, studentId);
+        const { enrolled = [], eligibleStudents = [] } =
+          rootState.batches || {};
+        const removedStudent = enrolled.find(
+          item => String(idOf(item)) === String(studentId)
+        );
+        this.setEnrolled(
+          enrolled.filter(item => String(idOf(item)) !== String(studentId))
+        );
+        if (removedStudent) {
+          this.setEligibleStudents([...eligibleStudents, removedStudent]);
+        }
+        this.setEnrollNotice("Student removed from this batch.");
+        this.setNotice("Student removed from this batch.");
+        await this.load();
+        return true;
+      } catch (error) {
+        this.setEnrollError(apiError(error));
+        return false;
+      } finally {
+        this.setPendingId(null);
       }
     },
   }),

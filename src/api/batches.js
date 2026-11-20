@@ -8,4 +8,8 @@ export const archiveBatch = id => client.patch(`/batches/${id}/archive`);
 export const deleteBatch = id => client.delete(`/batches/${id}`);
 export const enrollStudent = (id, studentId) =>
   client.post(`/batches/${id}/enroll`, { studentId });
+export const unenrollStudent = (id, studentId) =>
+  client.delete(`/batches/${id}/students/${studentId}`);
 export const listBatchStudents = id => client.get(`/batches/${id}/students`);
+export const listEligibleBatchStudents = (id, params) =>
+  client.get(`/batches/${id}/eligible-students`, { params });

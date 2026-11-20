@@ -6,6 +6,31 @@ import ErrorState from "./ErrorState";
 import Spinner from "./Spinner";
 import Table from "./Table";
 
+function DefaultCard({ row, columns }) {
+  return (
+    <dl className="grid gap-2">
+      {columns.map(column => {
+        const value =
+          typeof column.render === "function"
+            ? column.render(row)
+            : row?.[column.key];
+        if (value === null || value === undefined || value === "") return null;
+        return (
+          <div
+            key={column.key || column.label}
+            className="flex items-start justify-between gap-3"
+          >
+            <dt className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {column.label || column.key}
+            </dt>
+            <dd className="min-w-0 text-right text-sm text-ink">{value}</dd>
+          </div>
+        );
+      })}
+    </dl>
+  );
+}
+
 export default function DataList({
   columns = [],
   rows = [],
@@ -17,6 +42,7 @@ export default function DataList({
   emptyTitle,
   emptyText,
   onRowClick,
+  tableClassName = "",
 }) {
   if (loading) {
     return (
@@ -45,7 +71,7 @@ export default function DataList({
   }
 
   return (
-    <div className="md:rounded-card md:border md:border-line md:bg-surface md:shadow-card">
+    <div className="md:rounded-card">
       <ul className="grid gap-3 md:hidden">
         {rows.map(row => {
           const tappable = typeof onRowClick === "function";
@@ -71,7 +97,11 @@ export default function DataList({
                 }
                 className={classNames(tappable ? "cursor-pointer" : "")}
               >
-                {renderCard(row)}
+                {typeof renderCard === "function" ? (
+                  renderCard(row)
+                ) : (
+                  <DefaultCard row={row} columns={columns} />
+                )}
               </div>
             </li>
           );
@@ -83,6 +113,7 @@ export default function DataList({
           rows={rows}
           rowKey={rowKey}
           onRowClick={onRowClick}
+          className={tableClassName}
         />
       </div>
     </div>

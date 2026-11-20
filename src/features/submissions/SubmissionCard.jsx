@@ -16,7 +16,7 @@ const assignmentTitle = submission =>
     ? submission.assignment?.title || "Assignment"
     : submission.assignment || "Assignment";
 
-export default function SubmissionCard({ submission }) {
+export default function SubmissionCard({ submission, readOnly = false }) {
   const user = useSelector(state => state.auth.user);
   const student = user?.role === "student";
   const id = assignmentId(submission);
@@ -31,7 +31,7 @@ export default function SubmissionCard({ submission }) {
               ? "Your submission"
               : submission.student?.name || submission.student || "Learner"}
           </p>
-          {student && id ? (
+          {student && id && !readOnly ? (
             <Link
               to="/assignments/$assignmentId"
               params={{ assignmentId: id }}
@@ -73,17 +73,19 @@ export default function SubmissionCard({ submission }) {
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <SubmissionDownload submission={submission} />
-        {!student ? (
-          <Link
-            to="/grading"
-            className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-brand transition hover:bg-brand-soft"
-          >
-            Grade
-          </Link>
-        ) : null}
-      </div>
+      {readOnly ? null : (
+        <div className="flex flex-wrap items-center gap-2">
+          <SubmissionDownload submission={submission} />
+          {!student ? (
+            <Link
+              to="/grading"
+              className="inline-flex min-h-11 items-center rounded-control px-3 text-sm font-semibold text-brand transition hover:bg-brand-soft"
+            >
+              Grade
+            </Link>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

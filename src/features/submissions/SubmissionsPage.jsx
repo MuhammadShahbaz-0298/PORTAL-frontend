@@ -1,6 +1,7 @@
 /* Submissions page: the review inbox for staff and the upload desk for students. */
 import { useEffect, useMemo } from "react";
 import { connect } from "react-redux";
+import { hasPermission } from "../../lib/permissions";
 import { Link } from "@tanstack/react-router";
 import { Plus, SlidersHorizontal } from "lucide-react";
 import Badge from "../../components/ui/Badge";
@@ -29,40 +30,60 @@ const studentName = submission => {
   const student = submission.student;
   if (typeof student === "object" && student) return student.name || "Learner";
   return student || "Learner";
+
+};
+
+const studentIdOf = submission => {
+  const student = submission.student;
+  return typeof student === "object" && student
+    ? student._id || student.id
+    : student;
 };
 
 function SubmissionsPage({
   submissions,
   user,
+  studentId: filterStudentIdProp,
+  readOnly = false,
   load,
   loadAssignments,
   setQuery,
   openUpload,
+  exportExcel,
   clearMessages,
 }) {
   const student = user?.role === "student";
+  const canExport = hasPermission(user, "submissions.export");
 
   // One mount effect: the inbox, plus the assignment list used by the upload form.
   useEffect(() => {
     load();
-    if (student) loadAssignments();
-  }, [load, loadAssignments, student]);
+    if (!readOnly && student) loadAssignments();
+  }, [load, loadAssignments, student, readOnly]);
 
   const rows = useMemo(() => {
-    const needle = submissions.query.trim().toLowerCase();
-    if (!needle) return submissions.items;
+    let items = submissions.items;
+    if (filterStudentIdProp) {
+      items = items.filter(
+        item => String(studentIdOf(item)) === String(filterStudentIdProp)
+      );
+    }
 
-    return submissions.items.filter(item =>
+    const needle = submissions.query.trim().toLowerCase();
+    if (!needle) return items;
+
+    return items.filter(item =>
       [studentName(item), assignmentTitle(item), item.status, item.feedback]
         .filter(Boolean)
         .some(value => String(value).toLowerCase().includes(needle))
     );
-  }, [submissions.items, submissions.query]);
+  }, [submissions.items, submissions.query, filterStudentIdProp]);
 
   const message = submissions.pageError || submissions.notice;
+  const total = filterStudentIdProp ? rows.length : submissions.total;
   const countLabel = submissions.query
-    ? `Showing ${rows.length} of ${submissions.total} submissions`
-    : `Showing ${submissions.total} submissions`;
+    ? `Showing ${rows.length} of ${total} submissions`
+    : `Showing ${total} submissions`;
 
   const columns = [
     {
@@ -79,7 +100,8 @@ function SubmissionsPage({
       label: "Assignment",
       render: submission => {
         const id = assignmentId(submission);
-        return id ? (
+        if (readOnly || !id) return assignmentTitle(submission);
+        return (
           <Link
             to="/assignments/$assignmentId"
             params={{ assignmentId: id }}
@@ -87,8 +109,6 @@ function SubmissionsPage({
           >
             {assignmentTitle(submission)}
           </Link>
-        ) : (
-          assignmentTitle(submission)
         );
       },
     },
@@ -116,17 +136,21 @@ function SubmissionsPage({
         </span>
       ),
     },
-    {
-      key: "file",
-      label: "File",
-      render: submission => <SubmissionDownload submission={submission} />,
-    },
+    ...(readOnly
+      ? []
+      : [
+          {
+            key: "file",
+            label: "File",
+            render: submission => <SubmissionDownload submission={submission} />,
+          },
+        ]),
     {
       key: "action",
       label: "Action",
       className: "text-right",
       render: () =>
-        student ? null : (
+        readOnly || student ? null : (
           <Link
             to="/grading"
             className="inline-flex min-h-9 items-center rounded-control px-2 text-xs font-semibold text-brand transition hover:bg-brand-soft"
@@ -139,34 +163,60 @@ function SubmissionsPage({
 
   return (
     <div className="font-sans">
-      <PageHeader
-        eyebrow={student ? "Your work" : "Submission inbox"}
-        title="Submissions"
-        description={
-          student
-            ? "Track status, grades, and feedback on your work."
-            : "Review learner work and open the grading desk."
-        }
-        action={
-          student ? (
-            <Button onClick={openUpload}>
-              <Plus size={16} aria-hidden="true" />
-              Upload submission
-            </Button>
-          ) : (
-            <Link to="/grading" className={buttonClassName("secondary")}>
-              <SlidersHorizontal size={16} aria-hidden="true" />
-              Open grading
-            </Link>
-          )
-        }
-      />
+      {readOnly ? (
+        <div className="mb-4">
+          <h2 className="font-sans text-xl font-semibold tracking-tight text-ink">
+            Submissions
+          </h2>
+          <p className="mt-1 text-sm text-muted">Submissions and feedback.</p>
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow={student ? "Your work" : "Submission inbox"}
+          title="Submissions"
+          description={
+            student
+              ? "Track status, grades, and feedback on your work."
+              : "Review learner work and open the grading desk."
+          }
+          action={
+            <div className="flex gap-2">
+              {canExport ? (
+                <Button
+                  variant="secondary"
+                  onClick={exportExcel}
+                  loading={submissions.exporting}
+                >
+                  Export Excel
+                </Button>
+              ) : null}
+              {student ? (
+                <Button onClick={openUpload}>
+                  <Plus size={16} aria-hidden="true" />
+                  Upload submission
+                </Button>
+              ) : (
+                <Link to="/grading" className={buttonClassName("secondary")}>
+                  <SlidersHorizontal size={16} aria-hidden="true" />
+                  Open grading
+                </Link>
+              )}
+            </div>
+          }
+        />
+      )}
 
       <Toast
         message={message}
         tone={submissions.pageError ? "error" : "success"}
         onClose={clearMessages}
       />
+
+      {submissions.exportError ? (
+        <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+          {submissions.exportError}
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SearchInput
@@ -182,7 +232,9 @@ function SubmissionsPage({
         columns={columns}
         rows={rows}
         rowKey={submission => submission._id || submission.id}
-        renderCard={submission => <SubmissionCard submission={submission} />}
+        renderCard={submission => (
+          <SubmissionCard submission={submission} readOnly={readOnly} />
+        )}
         loading={submissions.loading}
         error={submissions.error}
         onRetry={() => load()}
@@ -198,11 +250,13 @@ function SubmissionsPage({
             ? "Try a different learner, assignment, or status."
             : student
               ? "Upload a ZIP archive to get started."
-              : "Learner work will appear here when it is uploaded."
+              : readOnly
+                ? "Submissions will appear here."
+                : "Learner work will appear here when it is uploaded."
         }
       />
 
-      <SubmissionUploadModal />
+      {readOnly ? null : <SubmissionUploadModal />}
     </div>
   );
 }
@@ -215,6 +269,7 @@ const mapState = state => ({
 const mapDispatch = dispatch => ({
   load: dispatch.submissions.load,
   loadAssignments: dispatch.submissions.loadAssignments,
+  exportExcel: dispatch.submissions.exportExcel,
   setQuery: dispatch.submissions.setQuery,
   openUpload: dispatch.submissions.openUpload,
   clearMessages: dispatch.submissions.clearMessages,

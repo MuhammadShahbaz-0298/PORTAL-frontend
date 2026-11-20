@@ -19,12 +19,13 @@ export async function confirmDialog({
     focusCancel: true,
     buttonsStyling: false,
     customClass: {
-      popup: "rounded-card font-sans",
+      popup:
+        "rounded-card border border-line bg-surface font-sans text-ink shadow-card",
       title: "text-lg font-semibold text-ink",
       htmlContainer: "text-sm text-muted",
       actions: "gap-3",
       confirmButton:
-        "m-0 min-h-11 rounded-control bg-danger px-4 text-sm font-semibold text-white",
+        "m-0 min-h-11 rounded-control bg-danger-action px-4 text-sm font-semibold text-white hover:bg-danger-action-hover",
       cancelButton:
         "m-0 min-h-11 rounded-control border border-line bg-surface px-4 text-sm font-semibold text-ink",
     },

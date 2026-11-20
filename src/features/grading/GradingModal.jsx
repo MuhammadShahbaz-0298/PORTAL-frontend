@@ -7,7 +7,10 @@ import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 import Textarea from "../../components/ui/Textarea";
+import WeightedGradeCard from "../../components/ui/WeightedGradeCard";
 import AiDraftPanel from "./AiDraftPanel";
+import CommentThread from "../../components/CommentThread";
+import VersionsList from "../../components/VersionsList";
 import { assignmentName, draftMarks, personName } from "./gradingUtils";
 import {
   DRAFT_POLL_INTERVAL_MS,
@@ -33,12 +36,17 @@ export default function GradingModal() {
     state => state.grading
   );
   const [form, setForm] = useState({ grade: "", feedback: "" });
+  const [rubricScores, setRubricScores] = useState([]);
   const [errors, setErrors] = useState({});
   const [pollTimedOut, setPollTimedOut] = useState(false);
   const [pollRun, setPollRun] = useState(0);
 
   const editingId = editing?._id || editing?.id;
   const draftPending = editing?.aiDraft?.status === "pending";
+  const studentRef = editing?.student;
+  const batchRef = editing?.batch;
+  const gradeStudentId = typeof studentRef === "string" ? studentRef : studentRef?._id;
+  const gradeBatchId = typeof batchRef === "string" ? batchRef : batchRef?._id;
 
   // Why: refreshing a draft replaces `editing` with a fresh copy, so the effect
   // depends on the submission id. That keeps whatever the teacher typed.
@@ -48,12 +56,21 @@ export default function GradingModal() {
         grade: editing?.grade ?? "",
         feedback: editing?.feedback ?? "",
       });
+      const items = editing?.assignment?.rubricItems;
+      if (Array.isArray(items)) {
+        setRubricScores(
+          items.map((item, index) => editing?.rubricScores?.[index] ?? "")
+        );
+      } else {
+        setRubricScores([]);
+      }
       setErrors({});
       setPollTimedOut(false);
       return;
     }
 
     setForm({ grade: "", feedback: "" });
+    setRubricScores([]);
     setErrors({});
     setPollTimedOut(false);
   }, [formOpen, editingId]);
@@ -93,6 +110,29 @@ export default function GradingModal() {
 
   const submit = async event => {
     event.preventDefault();
+    const rubricItems = editing?.assignment?.rubricItems;
+    const hasRubric = Array.isArray(rubricItems) && rubricItems.length > 0;
+
+    if (hasRubric) {
+      const nextErrors = {};
+      rubricScores.forEach((value, index) => {
+        const num = value === "" ? NaN : Number(value);
+        if (value === "" || Number.isNaN(num)) nextErrors[`rubric-${index}`] = "Enter marks.";
+        else if (num < 0) nextErrors[`rubric-${index}`] = "Marks must be 0 or more.";
+      });
+      setErrors(nextErrors);
+      if (Object.keys(nextErrors).length) return;
+      const total = rubricScores.reduce((sum, value) => sum + (Number(value) || 0), 0);
+      await dispatch.grading.save({
+        id: editingId,
+        grade: String(total),
+        feedback: form.feedback.trim(),
+        wasGraded: editing?.status === "graded",
+        rubricScores,
+      });
+      return;
+    }
+
     const nextErrors = validate(form);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) return;
@@ -162,28 +202,75 @@ export default function GradingModal() {
           </p>
         </div>
 
-        <FormField
-          label="Marks"
-          htmlFor="grading-marks"
-          required
-          error={errors.grade}
-          hint="Numeric marks from 0 to 100."
-        >
-          <Input
-            id="grading-marks"
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={form.grade}
-            invalid={Boolean(errors.grade)}
-            onChange={event => {
-              setForm(current => ({ ...current, grade: event.target.value }));
-              setErrors(current => ({ ...current, grade: "" }));
-              if (formError) dispatch.grading.setFormError("");
-            }}
+        {gradeStudentId && gradeBatchId ? (
+          <WeightedGradeCard
+            studentId={gradeStudentId}
+            batchId={gradeBatchId}
           />
-        </FormField>
+        ) : null}
+
+        {Array.isArray(editing?.assignment?.rubricItems) &&
+        editing.assignment.rubricItems.length > 0 ? (
+          <div className="grid gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+              Rubric criteria
+            </p>
+            {editing.assignment.rubricItems.map((item, index) => (
+              <FormField
+                key={index}
+                label={item.name || `Criterion ${index + 1}`}
+                htmlFor={`rubric-${index}`}
+                required
+                error={errors[`rubric-${index}`]}
+                hint={
+                  item.maxScore ? `Max ${item.maxScore}` : "Numeric marks."
+                }
+              >
+                <Input
+                  id={`rubric-${index}`}
+                  type="number"
+                  min="0"
+                  max={item.maxScore || 100}
+                  step="0.01"
+                  value={rubricScores[index] ?? ""}
+                  invalid={Boolean(errors[`rubric-${index}`])}
+                  onChange={event => {
+                    setRubricScores(current => {
+                      const next = [...current];
+                      next[index] = event.target.value;
+                      return next;
+                    });
+                    setErrors(current => ({ ...current, [`rubric-${index}`]: "" }));
+                    if (formError) dispatch.grading.setFormError("");
+                  }}
+                />
+              </FormField>
+            ))}
+          </div>
+        ) : (
+          <FormField
+            label="Marks"
+            htmlFor="grading-marks"
+            required
+            error={errors.grade}
+            hint="Numeric marks from 0 to 100."
+          >
+            <Input
+              id="grading-marks"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={form.grade}
+              invalid={Boolean(errors.grade)}
+              onChange={event => {
+                setForm(current => ({ ...current, grade: event.target.value }));
+                setErrors(current => ({ ...current, grade: "" }));
+                if (formError) dispatch.grading.setFormError("");
+              }}
+            />
+          </FormField>
+        )}
 
         <AiDraftPanel
           draft={editing?.aiDraft}
@@ -214,6 +301,12 @@ export default function GradingModal() {
           />
         </FormField>
 
+        {editing?.similarityFlag ? (
+          <div className="rounded-control border border-warning/30 bg-warning-soft px-3 py-2 text-xs font-medium text-warning">
+            Similarity flag: review before grading.
+          </div>
+        ) : null}
+
         {formError ? (
           <div
             role="alert"
@@ -223,6 +316,10 @@ export default function GradingModal() {
           </div>
         ) : null}
       </form>
+
+      <VersionsList submissionId={editingId} />
+
+      <CommentThread submissionId={editingId} />
     </Modal>
   );
 }

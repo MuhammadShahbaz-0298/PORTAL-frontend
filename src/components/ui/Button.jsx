@@ -3,9 +3,9 @@ import { classNames } from "../../lib/classNames";
 import Spinner from "./Spinner";
 
 const VARIANTS = {
-  primary: "bg-brand text-white hover:bg-brand-hover",
+  primary: "bg-brand-action text-white hover:bg-brand-action-hover",
   secondary: "border border-line bg-surface text-ink hover:bg-canvas",
-  danger: "bg-danger text-white hover:bg-danger/90",
+  danger: "bg-danger-action text-white hover:bg-danger-action-hover",
   ghost: "text-ink hover:bg-brand-soft",
 };
 

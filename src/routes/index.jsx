@@ -17,10 +17,18 @@ import AssignmentDetailPage from "../features/assignments/AssignmentDetailPage";
 import SubmissionsPage from "../features/submissions/SubmissionsPage";
 import GradingPage from "../features/grading/GradingPage";
 import AttendancePage from "../features/attendance/AttendancePage";
+import TimetablePage from "../features/timetable/TimetablePage";
 import BatchesPage from "../features/batches/BatchesPage";
 import UsersPage from "../features/users/UsersPage";
 import RolesPage from "../features/roles/RolesPage";
 import ProfilePage from "../features/profile/ProfilePage";
+import AnnouncementsPage from "../features/announcements/AnnouncementsPage";
+import QuizzesPage from "../features/quizzes/QuizzesPage";
+import QuizBuilderPage from "../features/quizzes/QuizBuilderPage";
+import QuizTakePage from "../features/quizzes/QuizTakePage";
+import CalendarPage from "../features/calendar/CalendarPage";
+import EventsPage from "../features/events/EventsPage";
+import AuditLogPage from "../features/audit/AuditLogPage";
 
 const rootRoute = createRootRoute({ component: Root });
 
@@ -74,10 +82,22 @@ const routeTree = rootRoute.addChildren([
     child("/submissions", SubmissionsPage),
     child("/grading", GradingPage),
     child("/attendance", AttendancePage),
+    child("/timetable", TimetablePage),
     child("/batches", BatchesPage),
     child("/users", UsersPage),
     child("/roles-permissions", RolesPage),
     child("/profile", ProfilePage),
+    child("/announcements", AnnouncementsPage),
+    child("/quizzes", QuizzesPage),
+    createRoute({
+      getParentRoute: () => protectedRoute,
+      path: "/quizzes/$quizId",
+      component: QuizTakePage,
+    }),
+    child("/quiz-builder", QuizBuilderPage),
+    child("/calendar", CalendarPage),
+    child("/events", EventsPage),
+    child("/audit-log", AuditLogPage),
   ]),
 ]);
 

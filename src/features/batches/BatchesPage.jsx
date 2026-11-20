@@ -31,13 +31,11 @@ function BatchesPage({
   const canDelete = hasPermission(user, "batches.delete", ["admin"]);
   const canEnroll = hasPermission(user, "batches.enroll", ["admin", "teacher"]);
 
-  // One mount effect: the cohorts, plus the teacher & student rosters when allowed.
+  // Only users who can assign a teacher need the directory for batch forms.
   useEffect(() => {
     load();
-    if (canCreate || canEdit || canEnroll) {
-      loadPeople();
-    }
-  }, [load, loadPeople, canCreate, canEdit, canEnroll]);
+    if (canCreate) loadPeople();
+  }, [load, loadPeople, canCreate]);
 
   const rows = useMemo(() => {
     const needle = batches.query.trim().toLowerCase();

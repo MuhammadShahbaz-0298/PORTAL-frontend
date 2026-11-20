@@ -21,6 +21,7 @@ export default function SubmissionUploadModal() {
   const [assignmentId, setAssignmentId] = useState("");
   const [file, setFile] = useState(null);
   const [errors, setErrors] = useState({});
+  const [currentTime] = useState(() => Date.now());
 
   const options = useMemo(
     () =>
@@ -29,13 +30,13 @@ export default function SubmissionUploadModal() {
           assignment =>
             assignment.active !== false &&
             (!assignment.dueDate ||
-              new Date(assignment.dueDate).getTime() > Date.now())
+              new Date(assignment.dueDate).getTime() > currentTime)
         )
         .map(assignment => ({
           value: assignment._id || assignment.id,
           label: assignment.title || "Untitled assignment",
         })),
-    [assignments]
+    [assignments, currentTime]
   );
 
   const existing = useMemo(

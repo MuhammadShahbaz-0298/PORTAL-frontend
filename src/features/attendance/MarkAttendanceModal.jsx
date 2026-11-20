@@ -1,5 +1,5 @@
 /* MarkAttendanceModal: choose a batch and date, then tick who was present. */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { CheckSquare, UsersRound } from "lucide-react";
 import Button from "../../components/ui/Button";
@@ -36,6 +36,12 @@ export default function MarkAttendanceModal({ studentId }) {
     [batches]
   );
 
+  const [maxDate] = useState(() => {
+    const today = new Date();
+    return new Date(
+      today.getTime() - today.getTimezoneOffset() * 60000
+    ).toISOString().slice(0, 10);
+  });
   const presentCount = presentIds.length;
   const leaveCount = Object.keys(leaves).length;
 
@@ -111,9 +117,7 @@ export default function MarkAttendanceModal({ studentId }) {
               type="date"
               value={date}
               className="h-11"
-              max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-                .toISOString()
-                .slice(0, 10)}
+              max={maxDate}
               disabled={saving}
               onChange={event =>
                 dispatch.attendance.selectDate({ date: event.target.value })
@@ -160,6 +164,7 @@ export default function MarkAttendanceModal({ studentId }) {
                       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
+                          aria-label={`Present: ${student.name || "Student"}`}
                           checked={present && !onLeave}
                           disabled={saving}
                           onChange={() => dispatch.attendance.togglePresent({ id })}

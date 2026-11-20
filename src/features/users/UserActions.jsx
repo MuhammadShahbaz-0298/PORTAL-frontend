@@ -1,5 +1,5 @@
 /* UserActions: reset, activate/deactivate, and archive one account. */
-import { Archive, KeyRound, Power, Trash2 } from "lucide-react";
+import { Archive, FileText, KeyRound, Power, Trash2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { classNames } from "../../lib/classNames";
 import Button from "../../components/ui/Button";
@@ -11,7 +11,13 @@ export default function UserActions({ user, layout = "table" }) {
   const dispatch = useDispatch();
   const { pendingId } = useSelector(state => state.users);
   const currentUser = useSelector(state => state.auth.user);
+  const { error: reportError, downloadingId: reportDownloading } = useSelector(
+    state => state.reportCards
+  );
   const canManage = hasPermission(currentUser, "users.manage", ["admin"]);
+  const canViewReport =
+    user?.role === "student" &&
+    hasPermission(currentUser, "profile.view", ["admin", "teacher"]);
   const id = user._id || user.id;
   const locked = pendingId !== null;
   const busy = String(pendingId) === String(id);
@@ -67,6 +73,11 @@ export default function UserActions({ user, layout = "table" }) {
     }
   };
 
+  const downloadReport = async () => {
+    dispatch.reportCards.clearError();
+    await dispatch.reportCards.download({ userId: id });
+  };
+
   const toggleActive = async () => {
     if (!active) {
       dispatch.users.setActive({ id, active: true, name: user.name, archived });
@@ -83,11 +94,32 @@ export default function UserActions({ user, layout = "table" }) {
       dispatch.users.setActive({ id, active: false, name: user.name });
   };
 
-  if (!canManage) return null;
+  if (!canManage && !canViewReport) return null;
 
   if (layout === "card") {
     return (
       <div className="grid grid-cols-2 gap-2">
+        {canViewReport ? (
+          <>
+            <Button
+              variant="secondary"
+              onClick={downloadReport}
+              loading={String(reportDownloading) === String(id)}
+              disabled={locked}
+              className="col-span-2 w-full"
+            >
+              <FileText size={16} aria-hidden="true" />
+              Report card
+            </Button>
+            {reportError ? (
+              <p role="alert" className="col-span-2 text-xs font-medium text-danger">
+                {reportError}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+        {canManage ? (
+          <>
         <Button
           variant="secondary"
           onClick={askReset}
@@ -130,12 +162,34 @@ export default function UserActions({ user, layout = "table" }) {
             className="col-span-2 justify-self-center text-brand"
           />
         ) : null}
+          </>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="flex items-center justify-end gap-1">
+    <div className="flex flex-col items-end gap-1">
+      {reportError ? (
+        <p role="alert" className="max-w-56 text-right text-xs font-medium text-danger">
+          {reportError}
+        </p>
+      ) : null}
+      <div className="flex items-center justify-end gap-1">
+      {canViewReport ? (
+        <button
+          type="button"
+          onClick={downloadReport}
+          disabled={locked}
+          aria-label={`Download report card for ${name}`}
+          title="Download report card"
+          className="grid h-11 w-11 place-items-center rounded-control text-muted transition hover:bg-brand-soft hover:text-brand disabled:opacity-40"
+        >
+          <FileText size={17} aria-hidden="true" />
+        </button>
+      ) : null}
+      {canManage ? (
+        <>
       {busy ? (
         <Spinner
           size="sm"
@@ -211,6 +265,9 @@ export default function UserActions({ user, layout = "table" }) {
       >
         <Trash2 size={17} aria-hidden="true" />
       </button>
+        </>
+      ) : null}
+      </div>
     </div>
   );
 }

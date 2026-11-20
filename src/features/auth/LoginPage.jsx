@@ -61,18 +61,21 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen bg-canvas font-sans lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-ink p-10 text-white lg:flex lg:flex-col lg:justify-between">
+      <section
+        style={{ backgroundColor: "#0f172a", color: "#ffffff" }}
+        className="relative hidden overflow-hidden bg-[#0f172a] p-10 text-white lg:flex lg:flex-col lg:justify-between"
+      >
         <div
           aria-hidden="true"
-          className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-brand/40 blur-3xl"
+          className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#6366f1]/40 blur-3xl"
         />
         <div
           aria-hidden="true"
-          className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-brand/20 blur-3xl"
+          className="absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-[#6366f1]/20 blur-3xl"
         />
 
         <div className="relative flex items-center gap-3">
-          <span className="grid h-10 w-10 place-items-center rounded-control bg-white text-sm font-bold text-ink">
+          <span className="grid h-10 w-10 place-items-center rounded-control bg-white text-sm font-bold text-[#0f172a]">
             P
           </span>
           <div>
@@ -197,10 +200,11 @@ export default function LoginPage() {
                 Sign in
               </Button>
             </form>
+
           </div>
 
           <p className="mt-5 text-center text-xs text-muted">
-            Protected by your school workspace · v1.0
+            Protected by your school workspace · {env.appVersion}
           </p>
         </div>
       </section>

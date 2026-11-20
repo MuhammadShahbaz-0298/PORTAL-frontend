@@ -3,11 +3,16 @@ import { register } from "../../api/auth";
 import {
   archiveUser,
   deleteUser,
+  exportUsers,
   listUsers,
   resetPassword as resetUserPassword,
   updateUser,
 } from "../../api/users";
 import { listRoles } from "../../api/roles";
+import {
+  bulkImportUsers,
+  downloadUserImportTemplate,
+} from "../../api/bulkImport";
 import { apiError } from "../../api/client";
 import { listHelper, loadList } from "../../lib/listHelper";
 
@@ -74,6 +79,13 @@ export const users = {
     pendingId: null,
     // Only place a password ever lives in this model; cleared when the modal closes.
     credentials: null,
+    importOpen: false,
+    importReport: null,
+    importError: "",
+    importSaving: false,
+    templateDownloading: false,
+    exportError: "",
+    exporting: false,
   },
 
   reducers: {
@@ -129,6 +141,30 @@ export const users = {
     clearCredentials(state) {
       return { ...state, credentials: null };
     },
+    openImport(state) {
+      return { ...state, importOpen: true, importReport: null, importError: "" };
+    },
+    closeImport(state) {
+      return { ...state, importOpen: false, importReport: null, importError: "" };
+    },
+    setImportReport(state, importReport) {
+      return { ...state, importReport, importError: "" };
+    },
+    setImportError(state, importError) {
+      return { ...state, importError };
+    },
+    setImportSaving(state, importSaving) {
+      return { ...state, importSaving };
+    },
+    setTemplateDownloading(state, templateDownloading) {
+      return { ...state, templateDownloading };
+    },
+    setExportError(state, exportError) {
+      return { ...state, exportError };
+    },
+    setExporting(state, exporting) {
+      return { ...state, exporting };
+    },
   },
 
   effects: () => ({
@@ -174,6 +210,77 @@ export const users = {
         return false;
       } finally {
         this.setSaving(false);
+      }
+    },
+
+    async bulkImport(file) {
+      this.setImportError("");
+      this.setImportSaving(true);
+      try {
+        const { data } = await bulkImportUsers(file);
+        const report = Array.isArray(data) ? data : [];
+        this.setImportReport(report);
+        const succeeded = report.filter(row => row.success).length;
+        this.setNotice(`Imported ${succeeded} of ${report.length} rows.`);
+        await this.load();
+        return true;
+      } catch (error) {
+        this.setImportError(apiError(error));
+        return false;
+      } finally {
+        this.setImportSaving(false);
+      }
+    },
+
+    async downloadImportTemplate() {
+      this.setImportError("");
+      this.setTemplateDownloading(true);
+      try {
+        const { data } = await downloadUserImportTemplate();
+        const url = window.URL.createObjectURL(data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "user-import-template.xlsx";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        return true;
+      } catch (error) {
+        this.setImportError(
+          apiError(error) || "The Excel template could not be downloaded. Try again."
+        );
+        return false;
+      } finally {
+        this.setTemplateDownloading(false);
+      }
+    },
+
+    async exportExcel() {
+      this.setExportError("");
+      this.setExporting(true);
+      try {
+        const { data } = await exportUsers();
+        const url = window.URL.createObjectURL(
+          new Blob([data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "users.xlsx";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        return true;
+      } catch (error) {
+        this.setExportError(
+          apiError(error) || "The Excel export could not be downloaded. Try again."
+        );
+        return false;
+      } finally {
+        this.setExporting(false);
       }
     },
 

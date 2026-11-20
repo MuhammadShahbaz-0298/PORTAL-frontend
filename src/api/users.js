@@ -6,3 +6,5 @@ export const updateUser = (id, payload) =>
 export const archiveUser = id => client.patch(`/users/${id}/archive`);
 export const deleteUser = id => client.delete(`/users/${id}`);
 export const resetPassword = id => client.patch(`/users/${id}/reset-password`);
+export const exportUsers = () =>
+  client.get("/users/export", { responseType: "blob" });

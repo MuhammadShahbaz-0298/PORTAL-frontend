@@ -1,5 +1,5 @@
 /* Toast: fixed, auto-dismissing page notification. */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { classNames } from "../../lib/classNames";
 import { TOAST_DURATION_MS } from "../../constants/app";
@@ -19,12 +19,17 @@ export default function Toast({
   onClose,
   className = "",
 }) {
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     if (!title && !message) return undefined;
 
-    const timer = setTimeout(() => onClose?.(), TOAST_DURATION_MS);
+    const timer = setTimeout(() => onCloseRef.current?.(), TOAST_DURATION_MS);
     return () => clearTimeout(timer);
-  }, [title, message, onClose]);
+  }, [title, message]);
 
   if (!title && !message) return null;
 
@@ -44,7 +49,7 @@ export default function Toast({
       </div>
       <button
         type="button"
-        onClick={onClose}
+        onClick={() => onCloseRef.current?.()}
         aria-label="Dismiss notification"
         className="grid h-8 w-8 shrink-0 place-items-center rounded-control text-muted hover:bg-canvas hover:text-ink"
       >

@@ -10,8 +10,13 @@ export default function Table({
   className = "",
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className={classNames("w-full border-collapse", className)}>
+    <div className="overflow-auto rounded-card border border-line bg-surface shadow-card">
+      <table
+        className={classNames(
+          "w-full border-separate border-spacing-0",
+          className
+        )}
+      >
         {children || (
           <>
             <TableHead>
@@ -68,7 +73,7 @@ export function TableHeader({ children, className = "" }) {
     <th
       scope="col"
       className={classNames(
-        "px-3 py-3.5 text-left text-sm font-semibold text-ink",
+        "border-b border-line px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted",
         className
       )}
     >
@@ -94,7 +99,7 @@ export function TableRow({
       onKeyDown={onKeyDown}
       tabIndex={tabIndex}
       className={classNames(
-        "border-b border-line last:border-none transition-colors hover:bg-canvas",
+        "transition-colors hover:bg-canvas",
         onClick
           ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-focus"
           : "",
@@ -108,7 +113,12 @@ export function TableRow({
 
 export function TableCell({ children, className = "" }) {
   return (
-    <td className={classNames("px-3 py-4 text-sm text-ink", className)}>
+    <td
+      className={classNames(
+        "border-b border-line px-4 py-3.5 align-top text-sm text-ink",
+        className
+      )}
+    >
       {children}
     </td>
   );

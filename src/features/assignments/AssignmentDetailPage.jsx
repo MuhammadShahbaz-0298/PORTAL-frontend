@@ -10,6 +10,8 @@ import PageHeader from "../../components/ui/PageHeader";
 import Spinner from "../../components/ui/Spinner";
 import { buttonClassName } from "../../components/ui/Button";
 import AssignmentBriefCard from "./AssignmentBriefCard";
+import ResourceList from "./ResourceList";
+import ResourceUploader from "./ResourceUploader";
 import StudentSubmissionCard from "./StudentSubmissionCard";
 import { formatDateTime } from "./assignmentUtils";
 
@@ -32,17 +34,32 @@ function AssignmentDetailPage({
   upload,
   clearDetailMessages,
   resetDetail,
+  loadResources,
+  resetResources,
 }) {
   const { assignmentId } = useParams({
     from: "/protected/assignments/$assignmentId",
   });
   const student = user?.role === "student";
+  const canManage =
+    user?.role === "admin" || user?.role === "teacher";
 
-  // One mount effect: read the brief (and this student's submission), reset on exit.
+  // One mount effect: read the brief, the resources, and this student's submission.
   useEffect(() => {
     loadDetail({ id: assignmentId, student });
-    return () => resetDetail();
-  }, [assignmentId, student, loadDetail, resetDetail]);
+    loadResources({ assignmentId });
+    return () => {
+      resetDetail();
+      resetResources();
+    };
+  }, [
+    assignmentId,
+    student,
+    loadDetail,
+    resetDetail,
+    loadResources,
+    resetResources,
+  ]);
 
   const backLink = (
     <Link
@@ -162,6 +179,21 @@ function AssignmentDetailPage({
           </Card>
         )}
       </div>
+
+      <Card className="mt-4 p-5 sm:p-6">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+              Resources
+            </p>
+            <h2 className="mt-1 font-sans text-lg font-semibold text-ink">
+              Assignment files
+            </h2>
+          </div>
+          {canManage ? <ResourceUploader assignmentId={assignmentId} /> : null}
+        </div>
+        <ResourceList assignmentId={assignmentId} canManage={canManage} />
+      </Card>
     </div>
   );
 }
@@ -183,6 +215,8 @@ const mapDispatch = dispatch => ({
   upload: dispatch.assignments.upload,
   clearDetailMessages: dispatch.assignments.clearDetailMessages,
   resetDetail: dispatch.assignments.resetDetail,
+  loadResources: dispatch.assignmentResources.load,
+  resetResources: dispatch.assignmentResources.reset,
 });
 
 export default connect(mapState, mapDispatch)(AssignmentDetailPage);

@@ -1,10 +1,12 @@
 /* RoleCard: the phone row for one role record in DataList. */
 import { Shield } from "lucide-react";
+import { useSelector } from "react-redux";
 import Badge from "../../components/ui/Badge";
-import { isCoreRole, PERMISSION_LABELS } from "./rolesConfig";
+import { isCoreRole } from "./rolesConfig";
 import RoleActions from "./RoleActions";
 
 export default function RoleCard({ role }) {
+  const permissionMeta = useSelector(state => state.roles.permissionMeta);
   const core = isCoreRole(role.name);
   const permissions = Array.isArray(role.permissions) ? role.permissions : [];
 
@@ -37,7 +39,7 @@ export default function RoleCard({ role }) {
         </div>
         <p className="line-clamp-2 text-muted">
           {permissions.length
-            ? permissions.map(p => PERMISSION_LABELS[p] || p).join(", ")
+            ? permissions.map(p => permissionMeta?.[p]?.label || p).join(", ")
             : "No permissions assigned"}
         </p>
       </div>

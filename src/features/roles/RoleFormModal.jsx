@@ -5,7 +5,6 @@ import Button from "../../components/ui/Button";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
-import { PERMISSION_GROUPS, PERMISSION_LABELS } from "./rolesConfig";
 
 const EMPTY_FORM = { name: "", label: "", permissions: [] };
 
@@ -27,20 +26,35 @@ function validate(form, isEditing) {
   return errors;
 }
 
+function groupPermissions(catalog, permissionMeta) {
+  const groups = new Map();
+  catalog.forEach(permission => {
+    const meta = permissionMeta?.[permission];
+    const group = meta?.group || "Other";
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(permission);
+  });
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === "Other") return 1;
+    if (b === "Other") return -1;
+    return a.localeCompare(b);
+  });
+}
+
 export default function RoleFormModal() {
   const dispatch = useDispatch();
-  const { formOpen, editing, formError, saving, catalog } = useSelector(
-    state => state.roles
-  );
+  const { formOpen, editing, formError, saving, catalog, permissionMeta } =
+    useSelector(state => state.roles);
 
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
   const isEditing = Boolean(editing);
 
-  const visibleCatalog = useMemo(() => {
-    return catalog.length ? catalog : Object.keys(PERMISSION_LABELS);
-  }, [catalog]);
+  const grouped = useMemo(
+    () => groupPermissions(catalog, permissionMeta),
+    [catalog, permissionMeta]
+  );
 
   useEffect(() => {
     if (!formOpen) {
@@ -166,45 +180,38 @@ export default function RoleFormModal() {
           </div>
 
           <div className="grid gap-4 max-h-80 overflow-y-auto rounded-control border border-line bg-canvas/30 p-3">
-            {Object.entries(PERMISSION_GROUPS).map(([group, permissions]) => {
-              const activeGroupPerms = permissions.filter(p =>
-                visibleCatalog.includes(p)
-              );
-              if (!activeGroupPerms.length) return null;
-
-              return (
-                <div
-                  key={group}
-                  className="rounded-control border border-line bg-surface p-3"
-                >
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
-                    {group}
-                  </p>
-                  <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-                    {activeGroupPerms.map(permission => {
-                      const checked = form.permissions.includes(permission);
-                      return (
-                        <label
-                          key={permission}
-                          className="flex cursor-pointer items-center gap-2.5 text-sm text-ink hover:text-brand"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={saving}
-                            onChange={() => togglePermission(permission)}
-                            className="h-4 w-4 rounded accent-brand"
-                          />
-                          <span>
-                            {PERMISSION_LABELS[permission] || permission}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+            {grouped.map(([group, permissions]) => (
+              <div
+                key={group}
+                className="rounded-control border border-line bg-surface p-3"
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+                  {group}
+                </p>
+                <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
+                  {permissions.map(permission => {
+                    const checked = form.permissions.includes(permission);
+                    const label =
+                      permissionMeta?.[permission]?.label || permission;
+                    return (
+                      <label
+                        key={permission}
+                        className="flex cursor-pointer items-center gap-2.5 text-sm text-ink hover:text-brand"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={saving}
+                          onChange={() => togglePermission(permission)}
+                          className="h-4 w-4 rounded accent-brand"
+                        />
+                        <span>{label}</span>
+                      </label>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
 

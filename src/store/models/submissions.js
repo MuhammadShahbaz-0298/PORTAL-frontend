@@ -1,6 +1,8 @@
 /* Submissions model: the inbox, student upload, and file downloads. */
 import {
   downloadSubmission,
+  exportSubmissions,
+  listSubmissionVersions,
   listSubmissions,
   saveSubmissionFile,
 } from "../../api/submissions";
@@ -25,6 +27,12 @@ export const submissions = {
     uploadProgress: null,
     downloadingId: null,
     downloadProgress: null,
+    exportError: "",
+    exporting: false,
+    versions: [],
+    versionsSubmissionId: null,
+    versionsLoading: false,
+    versionsError: "",
     notice: "",
     pageError: "",
   },
@@ -83,6 +91,21 @@ export const submissions = {
     clearMessages(state) {
       return { ...state, notice: "", pageError: "" };
     },
+    setExporting(state, exporting) {
+      return { ...state, exporting };
+    },
+    setExportError(state, exportError) {
+      return { ...state, exportError };
+    },
+    setVersions(state, { submissionId, items }) {
+      return { ...state, versionsSubmissionId: submissionId, versions: items };
+    },
+    setVersionsLoading(state, versionsLoading) {
+      return { ...state, versionsLoading };
+    },
+    setVersionsError(state, versionsError) {
+      return { ...state, versionsError };
+    },
   },
 
   effects: () => ({
@@ -100,6 +123,57 @@ export const submissions = {
         this.setAssignments([]);
       } finally {
         this.setAssignmentsLoading(false);
+      }
+    },
+
+    async exportExcel() {
+      this.setExportError("");
+      this.setExporting(true);
+      try {
+        const { data } = await exportSubmissions();
+        const url = window.URL.createObjectURL(
+          new Blob([data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "submissions.xlsx";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        return true;
+      } catch (error) {
+        this.setExportError(
+          apiError(error) || "The Excel export could not be downloaded. Try again."
+        );
+        return false;
+      } finally {
+        this.setExporting(false);
+      }
+    },
+
+    async loadVersions(submissionId) {
+      if (!submissionId) {
+        this.setVersions({ submissionId: null, items: [] });
+        this.setVersionsError("");
+        return;
+      }
+
+      this.setVersions({ submissionId, items: [] });
+      this.setVersionsError("");
+      this.setVersionsLoading(true);
+      try {
+        const { data } = await listSubmissionVersions(submissionId);
+        this.setVersions({
+          submissionId,
+          items: Array.isArray(data) ? data : data?.items || [],
+        });
+      } catch (error) {
+        this.setVersionsError(apiError(error));
+      } finally {
+        this.setVersionsLoading(false);
       }
     },
 

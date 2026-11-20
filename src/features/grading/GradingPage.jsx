@@ -95,9 +95,14 @@ function GradingPage({
             {draftBadge ? (
               <Badge tone={draftBadge.tone}>{draftBadge.label}</Badge>
             ) : null}
-            <Badge tone={submission.status === "graded" ? "success" : "warning"}>
+            <Badge
+              tone={submission.status === "graded" ? "success" : "warning"}
+            >
               {submission.status || "submitted"}
             </Badge>
+            {submission.similarityFlag ? (
+              <Badge tone="warning">Similarity flagged</Badge>
+            ) : null}
           </div>
         );
       },
@@ -125,7 +130,8 @@ function GradingPage({
     {
       key: "action",
       label: "Action",
-      className: "text-right",
+      className:
+        "sticky right-0 z-10 border-l border-line bg-surface text-right",
       render: submission => (
         <button
           type="button"
@@ -186,7 +192,7 @@ function GradingPage({
               className={classNames(
                 "min-h-9 rounded-full px-3 text-xs font-semibold transition",
                 grading.filter === filter.value
-                  ? "bg-ink text-white"
+                  ? "bg-ink text-canvas"
                   : "border border-line bg-surface text-muted hover:text-ink"
               )}
             >
@@ -204,6 +210,7 @@ function GradingPage({
         loading={grading.loading}
         error={grading.error}
         onRetry={() => load()}
+        tableClassName="min-w-[1100px]"
         emptyTitle={emptyTitle}
         emptyText="Submission records will appear here when learners upload their work."
       />

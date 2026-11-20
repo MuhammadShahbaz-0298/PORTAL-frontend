@@ -21,24 +21,29 @@ import {
 function AttendancePage({
   attendance,
   user,
+  studentId: filterStudentIdProp,
+  readOnly = false,
   load,
   loadBatches,
   setQuery,
   openForm,
+  exportExcel,
   clearMessages,
 }) {
   const student = user?.role === "student";
-  const studentId = user?.id || user?._id || user?.userId;
-  const canMark = hasPermission(user, "attendance.manage", [
+  const ownStudentId = user?.id || user?._id || user?.userId;
+  const filterStudentId = filterStudentIdProp || (student ? ownStudentId : undefined);
+  const canMark = !readOnly && hasPermission(user, "attendance.manage", [
     "admin",
     "teacher",
   ]);
+  const canExport = hasPermission(user, "attendance.export");
 
   // One mount effect: this learner's history, or the register for staff.
   useEffect(() => {
-    load({ studentId: student ? studentId : undefined });
+    load({ studentId: filterStudentId });
     if (canMark) loadBatches();
-  }, [load, loadBatches, student, studentId, canMark]);
+  }, [load, loadBatches, filterStudentId, canMark]);
 
   const rows = useMemo(() => {
     const needle = attendance.query.trim().toLowerCase();
@@ -115,29 +120,55 @@ function AttendancePage({
 
   return (
     <div className="font-sans">
-      <PageHeader
-        eyebrow="Daily register"
-        title="Attendance"
-        description={
-          student
-            ? "Review the days you were present, absent, or on leave with a reason."
-            : "Select a batch, then mark present students in one pass."
-        }
-        action={
-          canMark ? (
-            <Button onClick={openForm}>
-              <Plus size={16} aria-hidden="true" />
-              Mark attendance
-            </Button>
-          ) : null
-        }
-      />
+      {readOnly ? (
+        <div className="mb-4">
+          <h2 className="font-sans text-xl font-semibold tracking-tight text-ink">
+            Attendance
+          </h2>
+          <p className="mt-1 text-sm text-muted">Attendance history.</p>
+        </div>
+      ) : (
+        <PageHeader
+          eyebrow="Daily register"
+          title="Attendance"
+          description={
+            student
+              ? "Review the days you were present, absent, or on leave with a reason."
+              : "Select a batch, then mark present students in one pass."
+          }
+          action={
+            <div className="flex gap-2">
+              {canExport ? (
+                <Button
+                  variant="secondary"
+                  onClick={exportExcel}
+                  loading={attendance.exporting}
+                >
+                  Export Excel
+                </Button>
+              ) : null}
+              {canMark ? (
+                <Button onClick={openForm}>
+                  <Plus size={16} aria-hidden="true" />
+                  Mark attendance
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
+      )}
 
       <Toast
         message={message}
         tone={attendance.pageError ? "error" : "success"}
         onClose={clearMessages}
       />
+
+      {attendance.exportError ? (
+        <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+          {attendance.exportError}
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SearchInput
@@ -156,7 +187,7 @@ function AttendancePage({
         renderCard={record => <AttendanceCard record={record} />}
         loading={attendance.loading}
         error={attendance.error}
-        onRetry={() => load({ studentId: student ? studentId : undefined })}
+        onRetry={() => load({ studentId: filterStudentId })}
         emptyTitle={
           attendance.query ? "No matching records" : "No attendance history"
         }
@@ -165,12 +196,14 @@ function AttendancePage({
             ? "Try a different student name, email, or batch."
             : student
               ? "Your attendance entries will appear here."
-              : "Mark a batch register to start the history."
+              : readOnly
+                ? "Attendance records will appear here."
+                : "Mark a batch register to start the history."
         }
       />
 
       {canMark ? (
-        <MarkAttendanceModal studentId={student ? studentId : undefined} />
+        <MarkAttendanceModal studentId={student ? ownStudentId : undefined} />
       ) : null}
     </div>
   );
@@ -184,6 +217,7 @@ const mapState = state => ({
 const mapDispatch = dispatch => ({
   load: dispatch.attendance.load,
   loadBatches: dispatch.attendance.loadBatches,
+  exportExcel: dispatch.attendance.exportExcel,
   setQuery: dispatch.attendance.setQuery,
   openForm: dispatch.attendance.openForm,
   clearMessages: dispatch.attendance.clearMessages,

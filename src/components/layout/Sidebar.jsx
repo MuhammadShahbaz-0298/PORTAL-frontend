@@ -5,14 +5,14 @@ import { useDispatch, useSelector } from "react-redux";
 import Brand from "./Brand";
 import Avatar from "../ui/Avatar";
 import { classNames } from "../../lib/classNames";
-import { getVisibleNavItems, isActivePath, NAV_ICONS } from "./navConfig";
+import { getVisibleNavGroups, isActivePath, NAV_ICONS } from "./navConfig";
 
 export default function Sidebar() {
   const { user } = useSelector(state => state.auth);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const items = getVisibleNavItems(user);
+  const groups = getVisibleNavGroups(user);
 
   const signOut = () => {
     dispatch.auth.logout();
@@ -21,43 +21,49 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-line bg-surface md:flex">
-      <div className="px-5 py-5">
+      <div className="px-5 pb-5 pt-8">
         <Brand />
       </div>
 
-      <p className="px-6 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
-        Workspace
-      </p>
+      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pb-4 mt-5">
+        <div className="grid gap-2">
+          {groups.map((group, index) => (
+            <section
+              key={group.label}
+              aria-label={group.label}
+              className={index ? "border-t border-line pt-2" : ""}
+            >
+              <ul className="grid gap-1">
+                {group.items.map(item => {
+                  const Icon = NAV_ICONS[item.icon] || NAV_ICONS.dashboard;
+                  const active = isActivePath(location.pathname, item.path);
 
-      <nav aria-label="Main" className="flex-1 overflow-y-auto px-3 pb-4">
-        <ul className="grid gap-1">
-          {items.map(item => {
-            const Icon = NAV_ICONS[item.icon] || NAV_ICONS.dashboard;
-            const active = isActivePath(location.pathname, item.path);
-
-            return (
-              <li key={item.path}>
-                <Link
-                  to={item.path}
-                  aria-current={active ? "page" : undefined}
-                  className={classNames(
-                    "flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition",
-                    active
-                      ? "bg-brand-soft text-brand"
-                      : "text-ink hover:bg-canvas"
-                  )}
-                >
-                  <Icon
-                    size={18}
-                    aria-hidden="true"
-                    className={active ? "text-brand" : "text-muted"}
-                  />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                  return (
+                    <li key={item.path}>
+                      <Link
+                        to={item.path}
+                        aria-current={active ? "page" : undefined}
+                        className={classNames(
+                          "flex min-h-11 items-center gap-3 rounded-control px-3 text-sm font-medium transition",
+                          active
+                            ? "bg-brand-soft text-brand"
+                            : "text-ink hover:bg-canvas"
+                        )}
+                      >
+                        <Icon
+                          size={18}
+                          aria-hidden="true"
+                          className={active ? "text-brand" : "text-muted"}
+                        />
+                        {item.label}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
       </nav>
 
       <div className="border-t border-line p-3">

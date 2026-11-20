@@ -37,3 +37,7 @@ export const downloadSubmission = (id, onDownloadProgress) =>
     responseType: "blob",
     onDownloadProgress,
   });
+export const exportSubmissions = () =>
+  client.get("/submissions/export", { responseType: "blob" });
+export const listSubmissionVersions = submissionId =>
+  client.get(`/submissions/${submissionId}/versions`);

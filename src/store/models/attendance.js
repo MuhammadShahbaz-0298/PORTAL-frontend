@@ -1,5 +1,9 @@
 /* Attendance model: the history list plus the batch checklist register. */
-import { listAttendance, markAttendance } from "../../api/attendance";
+import {
+  exportAttendance,
+  listAttendance,
+  markAttendance,
+} from "../../api/attendance";
 import { listBatches, listBatchStudents } from "../../api/batches";
 import { apiError } from "../../api/client";
 import { toCollection } from "../../lib/apiData";
@@ -34,6 +38,8 @@ export const attendance = {
     rosterLoading: false,
     rosterError: "",
     saving: false,
+    exportError: "",
+    exporting: false,
     notice: "",
     pageError: "",
   },
@@ -87,6 +93,12 @@ export const attendance = {
     clearMessages(state) {
       return { ...state, notice: "", pageError: "" };
     },
+    setExportError(state, exportError) {
+      return { ...state, exportError };
+    },
+    setExporting(state, exporting) {
+      return { ...state, exporting };
+    },
   },
 
   effects: () => ({
@@ -106,6 +118,34 @@ export const attendance = {
         this.setBatches([]);
       } finally {
         this.setBatchesLoading(false);
+      }
+    },
+
+    async exportExcel() {
+      this.setExportError("");
+      this.setExporting(true);
+      try {
+        const { data } = await exportAttendance();
+        const url = window.URL.createObjectURL(
+          new Blob([data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "attendance.xlsx";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+        return true;
+      } catch (error) {
+        this.setExportError(
+          apiError(error) || "The Excel export could not be downloaded. Try again."
+        );
+        return false;
+      } finally {
+        this.setExporting(false);
       }
     },
 

@@ -126,7 +126,7 @@ export const grading = {
       return loadList(this, () => listSubmissions());
     },
 
-    async save({ id, grade, feedback, wasGraded }) {
+    async save({ id, grade, feedback, wasGraded, rubricScores }) {
       this.setFormError("");
       this.setSaving(true);
 
@@ -135,6 +135,7 @@ export const grading = {
           grade,
           feedback,
           status: "graded",
+          ...(rubricScores ? { rubricScores } : {}),
         });
 
         this.closeEditor();

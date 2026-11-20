@@ -11,21 +11,13 @@ import Toast from "../../components/ui/Toast";
 import RoleCard from "./RoleCard";
 import RoleActions from "./RoleActions";
 import RoleFormModal from "./RoleFormModal";
-import { isCoreRole, PERMISSION_LABELS } from "./rolesConfig";
+import { isCoreRole } from "./rolesConfig";
 
-function RolesPage({
-  roles,
-  load,
-  loadCatalog,
-  setQuery,
-  openForm,
-  clearMessages,
-}) {
-  // One mount effect: the roles list and the system permission catalog.
+function RolesPage({ roles, load, setQuery, openForm, clearMessages }) {
+  // One mount effect: roles, catalog permissions, and permission metadata.
   useEffect(() => {
     load();
-    loadCatalog();
-  }, [load, loadCatalog]);
+  }, [load]);
 
   const rows = useMemo(() => {
     const needle = roles.query.trim().toLowerCase();
@@ -41,7 +33,7 @@ function RolesPage({
       const matchPerms =
         Array.isArray(role.permissions) &&
         role.permissions.some(p => {
-          const label = PERMISSION_LABELS[p] || p;
+          const label = roles.permissionMeta?.[p]?.label || p;
           return (
             p.toLowerCase().includes(needle) ||
             label.toLowerCase().includes(needle)
@@ -49,7 +41,7 @@ function RolesPage({
         });
       return matchName || matchLabel || matchPerms;
     });
-  }, [roles.items, roles.query]);
+  }, [roles.items, roles.query, roles.permissionMeta]);
 
   const message = roles.pageError || roles.notice;
   const countLabel = roles.query
@@ -98,7 +90,9 @@ function RolesPage({
 
         return (
           <span className="line-clamp-2 text-xs text-muted">
-            {permissions.map(p => PERMISSION_LABELS[p] || p).join(", ")}
+            {permissions
+              .map(p => roles.permissionMeta?.[p]?.label || p)
+              .join(", ")}
           </span>
         );
       },
@@ -168,7 +162,6 @@ const mapState = state => ({
 
 const mapDispatch = dispatch => ({
   load: dispatch.roles.load,
-  loadCatalog: dispatch.roles.loadCatalog,
   setQuery: dispatch.roles.setQuery,
   openForm: dispatch.roles.openForm,
   clearMessages: dispatch.roles.clearMessages,

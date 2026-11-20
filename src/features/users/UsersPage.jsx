@@ -12,6 +12,7 @@ import Toast from "../../components/ui/Toast";
 import { filterItems } from "../../lib/listHelper";
 import { hasPermission } from "../../lib/permissions";
 import { roleLabel } from "../../lib/roles";
+import BulkImportModal from "./BulkImportModal";
 import CredentialsModal from "./CredentialsModal";
 import UserActions from "./UserActions";
 import UserCard from "./UserCard";
@@ -26,6 +27,8 @@ function UsersPage({
   loadRoles,
   setQuery,
   openForm,
+  openImport,
+  exportExcel,
   clearMessages,
   clearCredentials,
 }) {
@@ -45,6 +48,9 @@ function UsersPage({
     "admin",
     "teacher",
   ]);
+  const canImport = hasPermission(currentUser, "users.manage");
+  const canExport = hasPermission(currentUser, "users.manage");
+
   const message = users.pageError || users.notice;
   const countLabel = users.query
     ? `Showing ${rows.length} of ${users.total} accounts`
@@ -107,12 +113,28 @@ function UsersPage({
         title="Users"
         description="Create and manage accounts for every active role."
         action={
-          canCreate ? (
-            <Button onClick={openForm}>
-              <Plus size={16} aria-hidden="true" />
-              Create account
-            </Button>
-          ) : null
+          <div className="flex gap-2">
+            {canImport ? (
+              <Button variant="secondary" onClick={openImport}>
+                Bulk import
+              </Button>
+            ) : null}
+              {canExport ? (
+                <Button
+                  variant="secondary"
+                  onClick={exportExcel}
+                  loading={users.exporting}
+                >
+                  Export Excel
+                </Button>
+              ) : null}
+            {canCreate ? (
+              <Button onClick={openForm}>
+                <Plus size={16} aria-hidden="true" />
+                Create account
+              </Button>
+            ) : null}
+          </div>
         }
       />
 
@@ -121,6 +143,12 @@ function UsersPage({
         tone={users.pageError ? "error" : "success"}
         onClose={clearMessages}
       />
+
+      {users.exportError ? (
+        <p role="alert" className="mb-4 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+          {users.exportError}
+        </p>
+      ) : null}
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SearchInput
@@ -150,6 +178,7 @@ function UsersPage({
 
       <UserFormModal />
       <CredentialsModal />
+      <BulkImportModal />
     </div>
   );
 }
@@ -164,6 +193,8 @@ const mapDispatch = dispatch => ({
   loadRoles: dispatch.users.loadRoles,
   setQuery: dispatch.users.setQuery,
   openForm: dispatch.users.openForm,
+  openImport: dispatch.users.openImport,
+  exportExcel: dispatch.users.exportExcel,
   clearMessages: dispatch.users.clearMessages,
   clearCredentials: dispatch.users.clearCredentials,
 });

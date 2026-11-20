@@ -1,10 +1,7 @@
 /* Profile page: signed-in identity plus a session-safe password change. */
 import { useEffect, useState } from "react";
 import { connect } from "react-redux";
-import { KeyRound, Mail, ShieldCheck, UserRound } from "lucide-react";
-// import Avatar from "../../components/ui/Avatar";
-// import Badge from "../../components/ui/Badge";
-// import Button from "../../components/ui/Button";
+import { KeyRound, Mail, ShieldCheck, UserRound, Download } from "lucide-react";
 import FormField from "../../components/ui/FormField";
 import Input from "../../components/ui/Input";
 import PageHeader from "../../components/ui/PageHeader";
@@ -42,11 +39,14 @@ function ProfilePage({
   success,
   changePassword,
   resetMessages,
+  reportError,
+  reportDownloading,
+  downloadReportCard,
+  clearReportError,
 }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
-  // Why: messages belong to this form, so they must not survive navigation.
   useEffect(() => {
     resetMessages();
     return () => resetMessages();
@@ -73,6 +73,11 @@ function ProfilePage({
       setForm(EMPTY_FORM);
       setErrors({});
     }
+  };
+
+  const handleDownloadReportCard = async () => {
+    clearReportError();
+    await downloadReportCard({ userId: user?._id || user?.id });
   };
 
   return (
@@ -107,10 +112,8 @@ function ProfilePage({
                 <Mail size={17} aria-hidden="true" />
               </span>
               <div>
-                <dt className="font-medium text-ink">Email verified</dt>
-                <dd className="text-muted">
-                  Verified by the school backend for sign-in and notifications.
-                </dd>
+                <dt className="font-medium text-ink">Email</dt>
+                <dd className="text-muted">Your school account email address.</dd>
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -120,7 +123,7 @@ function ProfilePage({
               <div>
                 <dt className="font-medium text-ink">Role and access</dt>
                 <dd className="text-muted">
-                  {roleLabel(user?.role)} · permissions follow this role.
+                  {roleLabel(user?.role)} permissions follow this role.
                 </dd>
               </div>
             </div>
@@ -233,6 +236,34 @@ function ProfilePage({
           </form>
         </section>
       </div>
+
+      {user?.role === "student" ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <section className="rounded-card border border-line bg-surface p-5 shadow-card sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+              Reports
+            </p>
+            <h2 className="mt-1 font-sans text-xl font-semibold tracking-tight text-ink">
+              Report card
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              Download your current report card.
+            </p>
+            {reportError ? (
+              <p role="alert" className="mt-3 rounded-control border border-danger/30 bg-danger-soft px-3 py-2 text-sm font-medium text-danger">
+                {reportError}
+              </p>
+            ) : null}
+            <Button
+              onClick={handleDownloadReportCard}
+              loading={Boolean(reportDownloading)}
+              className="mt-4 justify-self-start"
+            >
+              <Download size={16} aria-hidden="true" /> Download report card
+            </Button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -242,11 +273,15 @@ const mapState = state => ({
   loading: state.auth.loading,
   error: state.auth.error,
   success: state.auth.success,
+  reportError: state.reportCards.error,
+  reportDownloading: state.reportCards.downloadingId,
 });
 
 const mapDispatch = dispatch => ({
   changePassword: dispatch.auth.changePassword,
   resetMessages: dispatch.auth.resetMessages,
+  downloadReportCard: dispatch.reportCards.download,
+  clearReportError: dispatch.reportCards.clearError,
 });
 
 export default connect(mapState, mapDispatch)(ProfilePage);

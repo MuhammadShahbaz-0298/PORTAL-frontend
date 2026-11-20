@@ -140,7 +140,7 @@ export const assignments = {
       }
     },
 
-    async save({ id, values }) {
+    async save({ id, values, keepOpen = false }) {
       this.setFormError("");
       this.setSaving(true);
 
@@ -151,17 +151,19 @@ export const assignments = {
           active: true,
         };
 
+        let savedId = id;
         if (id) {
           await updateAssignment(id, payload);
           this.setNotice("Assignment updated successfully.");
         } else {
-          await createAssignment(payload);
+          const response = await createAssignment(payload);
+          savedId = response?.data?._id || response?._id;
           this.setNotice("Assignment created successfully.");
         }
 
-        this.closeForm();
+        if (!keepOpen) this.closeForm();
         await this.load();
-        return true;
+        return savedId || true;
       } catch (error) {
         this.setFormError(apiError(error));
         return false;

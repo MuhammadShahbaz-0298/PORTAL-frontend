@@ -1,12 +1,13 @@
 /* BatchEnrollmentModal: additive enrollment of students into the chosen cohort. */
 import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { UserPlus, Users } from "lucide-react";
+import { UserMinus, UserPlus, Users } from "lucide-react";
 import Button from "../../components/ui/Button";
 import FormField from "../../components/ui/FormField";
 import Modal from "../../components/ui/Modal";
 import SearchSelect from "../../components/ui/SearchSelect";
 import Spinner from "../../components/ui/Spinner";
+import { confirmDialog } from "../../components/ui/ConfirmDialog";
 import { personEmail, personName } from "./batchUtils";
 
 export default function BatchEnrollmentModal() {
@@ -18,8 +19,10 @@ export default function BatchEnrollmentModal() {
     enrolledLoading,
     enrollError,
     enrolling,
-    students,
-    peopleLoading,
+    eligibleStudents,
+    eligibleLoading,
+    enrollNotice,
+    pendingId,
   } = useSelector(state => state.batches);
 
   const [studentId, setStudentId] = useState("");
@@ -29,12 +32,12 @@ export default function BatchEnrollmentModal() {
   }, [enrolled]);
 
   const availableStudents = useMemo(() => {
-    return students.filter(
+    return eligibleStudents.filter(
       student =>
         student.active !== false &&
         !enrolledIdSet.has(String(student._id || student.id))
     );
-  }, [students, enrolledIdSet]);
+  }, [eligibleStudents, enrolledIdSet]);
 
   const studentOptions = useMemo(() => {
     return availableStudents.map(student => ({
@@ -44,6 +47,7 @@ export default function BatchEnrollmentModal() {
   }, [availableStudents]);
 
   const close = () => {
+    if (pendingId) return;
     setStudentId("");
     dispatch.batches.closeEnroll();
   };
@@ -65,7 +69,11 @@ export default function BatchEnrollmentModal() {
       title={`Enroll students · ${enrollBatch?.name || "Batch"}`}
       className="sm:max-w-xl"
       footer={
-        <Button variant="secondary" onClick={close} disabled={enrolling}>
+        <Button
+          variant="secondary"
+          onClick={close}
+          disabled={enrolling || Boolean(pendingId)}
+        >
           Done
         </Button>
       }
@@ -77,10 +85,10 @@ export default function BatchEnrollmentModal() {
             htmlFor="enroll-student"
             className="flex-1"
             hint={
-              peopleLoading
-                ? "Loading student directory…"
-                : availableStudents.length === 0 && !peopleLoading
-                  ? "All active students are enrolled in this batch."
+              eligibleLoading
+                ? "Loading eligible students…"
+                : availableStudents.length === 0 && !eligibleLoading
+                  ? "No eligible students are available. Create an unassigned student account or ask an administrator."
                   : undefined
             }
           >
@@ -88,12 +96,12 @@ export default function BatchEnrollmentModal() {
               id="enroll-student"
               aria-label="Student"
               placeholder={
-                peopleLoading ? "Loading students…" : "Choose a student"
+                eligibleLoading ? "Loading students…" : "Choose a student"
               }
               options={studentOptions}
               value={studentId}
               disabled={
-                peopleLoading || availableStudents.length === 0 || enrolling
+                eligibleLoading || availableStudents.length === 0 || enrolling
               }
               onChange={setStudentId}
             />
@@ -102,7 +110,7 @@ export default function BatchEnrollmentModal() {
           <Button
             type="submit"
             loading={enrolling}
-            disabled={!studentId || peopleLoading}
+            disabled={!studentId || eligibleLoading}
             className="shrink-0"
           >
             <UserPlus size={16} aria-hidden="true" />
@@ -117,6 +125,14 @@ export default function BatchEnrollmentModal() {
           >
             {enrollError}
           </div>
+        ) : null}
+        {enrollNotice ? (
+          <p
+            role="status"
+            className="rounded-control border border-success/30 bg-success-soft px-3 py-2 text-sm font-medium text-success"
+          >
+            {enrollNotice}
+          </p>
         ) : null}
 
         <div className="rounded-control border border-line">
@@ -154,6 +170,29 @@ export default function BatchEnrollmentModal() {
                       <span className="text-xs text-muted">
                         {personEmail(student) || "—"}
                       </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="min-h-9 shrink-0 px-2 text-danger hover:bg-danger-soft"
+                        loading={pendingId === id}
+                        disabled={enrolling || Boolean(pendingId)}
+                        onClick={async () => {
+                          const confirmed = await confirmDialog({
+                            title: "Remove student from this batch?",
+                            text: `${personName(student)} will lose access to this batch's quizzes and new work. Existing records will be kept.`,
+                            confirmText: "Remove student",
+                          });
+                          if (confirmed) {
+                            await dispatch.batches.removeStudent({
+                              studentId: id,
+                            });
+                          }
+                        }}
+                        aria-label={`Remove ${personName(student)} from this batch`}
+                      >
+                        <UserMinus size={15} aria-hidden="true" />
+                        Remove
+                      </Button>
                     </li>
                   );
                 })}
