@@ -58,11 +58,6 @@ function Topbar({ user }) {
           </button>
 
           <NotificationMenu />
-
-          <span className="hidden rounded-full bg-canvas px-3 py-1 text-xs font-semibold capitalize text-muted sm:inline-flex">
-            {user?.role || "member"}
-          </span>
-          <Avatar name={user?.name} size="sm" />
         </div>
       </div>
     </header>
