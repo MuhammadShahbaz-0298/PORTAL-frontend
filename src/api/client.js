@@ -82,7 +82,7 @@ client.interceptors.response.use(
 
 export const apiError = error => {
   if (error?.code === "ERR_NETWORK" || !error?.response) {
-    return "Unable to reach the portal service. Check that the server is running and try again.";
+    return error.message;
   }
 
   const payload = error.response?.data;
@@ -91,7 +91,7 @@ export const apiError = error => {
   return (
     payload?.error ||
     payload?.message ||
-    "Something went wrong while completing that request."
+    error.message
   );
 };
 
